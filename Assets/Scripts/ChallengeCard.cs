@@ -6,8 +6,7 @@ public class ChallengeCard : MonoBehaviour
 {
     public string difficulty;
 
-    public int GetPoints()
-    {
+    public int GetPoints() {
         if (difficulty == "easy") {
             return 1;
         } else if (difficulty == "medium") {

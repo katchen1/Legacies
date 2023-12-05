@@ -21,16 +21,13 @@ public class MentorIcon : MonoBehaviour
     // Update is called once per frame
     void Update()
     {
+        // Make the icon float up and down
         if (up) {
             shift += 0.05f;
-            if (shift >= 10f) {
-                up = false;
-            }
+            if (shift >= 10f) up = false;
         } else {
             shift -= 0.05f;
-            if (shift <= -10f) {
-                up = true;
-            }
+            if (shift <= -10f) up = true;
         }
         gameObject.transform.position = new Vector3(gameObject.transform.position.x, startY + shift, gameObject.transform.position.z);
     }

@@ -3,86 +3,44 @@ using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
 using TMPro;
+using UnityEngine.Events;
 
 public class Game : MonoBehaviour
 {
     public GameObject meeplePrefab;
     public GameObject[] squares;
-    public List<GameObject> challengeCardsEasy;
-    public List<GameObject> challengeCardsMedium;
-    public List<GameObject> challengeCardsHard;
-    public List<GameObject> eventCardsEarly;
-    public List<GameObject> eventCardsMid;
-    public List<GameObject> eventCardsLate;
-    public List<GameObject> mentorCards;
-    public List<GameObject> rulesPages;
-    public GameObject difficultySelectionPanel;
-    public GameObject earlyEventSelectionPanel;
-    public GameObject midEventSelectionPanel;
-    public GameObject lateEventSelectionPanel;
-    public GameObject challengePanel;
-    public GameObject eventPanel;
-    public GameObject menuPanel;
-    public GameObject rulesPanel;
-    public GameObject endingPanel;
-    public GameObject mentorPanel;
-    public GameObject mentorIcon;
-    public Button rollButton;
-    public Button easyButton;
-    public Button mediumButton;
-    public Button hardButton;
-    public Button revealButton;
-    public Button challengeCorrectButton;
-    public Button challengeIncorrectButton;
-    public Button drawEarlyEventButton;
-    public Button drawMidEventButton;
-    public Button drawLateEventButton;
-    public Button acknowledgeEventButton;
-    public Button nextPageButton;
-    public Button previousPageButton;
-    public Button checkMentorButton;
-    public Button mentorBackButton;
-    public Button useMentorButton;
-    public Button rollChoiceOneButton;
-    public Button rollChoiceTwoButton;
-    public TMP_Text rollChoiceOneButtonText;
-    public TMP_Text rollChoiceTwoButtonText;
-    public TMP_Text challengePointsText;
-    public TMP_Text turnText;
-    public TMP_Text statsText;
-    public TMP_Text rollChoiceHintText;
 
+    public List<GameObject> challengeCardsEasy, challengeCardsMedium, challengeCardsHard; // Challenge cards
+    public List<GameObject> eventCardsEarly, eventCardsMid, eventCardsLate; // Event cards
+    public List<GameObject> mentorCards; // Mentor cards
+    public List<GameObject> rulesPages; // Rulebook
+
+    public GameObject difficultySelectionPanel, challengePanel; // Challenge handling
+    public GameObject earlyEventSelectionPanel, midEventSelectionPanel, lateEventSelectionPanel, eventPanel; // Event handling
+    public GameObject menuPanel, rulesPanel, endingPanel, mentorPanel, mentorIcon; // Other UI objects
+
+    public Button easyButton, mediumButton, hardButton, revealButton, challengeCorrectButton, challengeIncorrectButton; // Challenge buttons
+    public Button drawEarlyEventButton, drawMidEventButton, drawLateEventButton, acknowledgeEventButton; // Event buttons
+    public Button checkMentorButton, mentorBackButton, useMentorButton; // Mentor buttons
+    public Button nextPageButton, previousPageButton; // Rulebook buttons
+    public Button rollButton, rollChoiceOneButton, rollChoiceTwoButton; // Roll buttons
+
+    public TMP_Text rollChoiceOneButtonText, rollChoiceTwoButtonText, rollChoiceHintText; // Roll texts
+    public TMP_Text turnText, challengePointsText, statsText; // Other UI texts
+
+    // Private variables
     private List<GameObject> communityCards = new List<GameObject>();
     private List<GameObject> meeples = new List<GameObject>();
     private List<GameObject> activeMeeples = new List<GameObject>();
-    private int currentRoll = 0;
-    private int currentEventMoveEffect = 0;
-    private int currentRulesPageNumber = 0;
-    private bool rolled = false;
-    private string currentDifficulty = "";
-    private bool difficultySelected = false;
-    private bool revealed = false;
-    private bool eventCardDrawn = false;
-    private bool eventAcknowledged = false;
-    private bool challengeCorrect = false;
-    private bool challengeEvaluated = false;
-    private string rollChoiceChosen = "";
-    private string mentorToUse = "";
+    private List<List<GameObject>> decks = new List<List<GameObject>>();
+    private int currentRoll, currentEventMoveEffect, currentRulesPageNumber = 0;
+    private bool rolled, eventCardDrawn, eventAcknowledged, difficultySelected, revealed, challengeEvaluated, challengeCorrect = false;
+    private string currentDifficulty, rollChoiceChosen, mentorToUse = "";
+
+    // Meeples
     private GameObject currentMeeple;
-    private Color[] meepleColors = {
-        Color.red,
-        Color.black,
-        Color.yellow,
-        Color.green,
-        Color.blue
-    };
-    private string[] meepleColorStrings = {
-        "Red",
-        "Black",
-        "Yellow",
-        "Green",
-        "Blue"
-    };
+    private Color[] meepleColors = { Color.red, Color.black, Color.yellow, Color.green, Color.blue };
+    private string[] meepleColorStrings = { "Red", "Black",  "Yellow",  "Green",  "Blue" };
     private Vector3[] positionShifts = {
         new Vector3(0f, 0f, 0f),
         new Vector3(0.2f, 0f, 0.2f),
@@ -94,55 +52,28 @@ public class Game : MonoBehaviour
     // Start is called before the first frame update
     void Start()
     {
-        for (int i = 0; i < challengeCardsEasy.Count; i++) {
-            challengeCardsEasy[i].gameObject.SetActive(false);
+        // Deactivate stuff
+        decks = new List<List<GameObject>>{ challengeCardsEasy, challengeCardsMedium, challengeCardsHard, eventCardsEarly, eventCardsMid, eventCardsLate, mentorCards };
+        List<GameObject> buttons = new List<GameObject>{ rollButton.gameObject, revealButton.gameObject, challengeCorrectButton.gameObject, challengeIncorrectButton.gameObject };
+        List<GameObject> panels = new List<GameObject>{ difficultySelectionPanel, challengePanel, eventPanel, earlyEventSelectionPanel, midEventSelectionPanel, lateEventSelectionPanel };
+        DeactivateAllLists(decks);
+        DeactivateAllItems(buttons);
+        DeactivateAllItems(panels);
+
+        // Assign button listeners
+        Button[] clickableButtons = { 
+            rollButton, revealButton, acknowledgeEventButton, drawEarlyEventButton, drawMidEventButton, drawLateEventButton,
+            challengeCorrectButton, challengeIncorrectButton, easyButton, mediumButton, hardButton, nextPageButton, previousPageButton,
+            checkMentorButton, mentorBackButton, useMentorButton, rollChoiceOneButton, rollChoiceTwoButton
+        };
+        UnityAction[] listeners = {
+            RollOnClick, RevealOnClick, AcknowledgeEventOnClick, DrawEventCardOnClick, DrawEventCardOnClick, DrawEventCardOnClick,
+            ChallengeCorrectOnClick, ChallengeIncorrectOnClick, EasyOnClick, MediumOnClick, HardOnClick, NextPageOnClick, PreviousPageOnClick,
+            CheckMentorOnClick, MentorBackOnClick, UseMentorOnClick, RollChoiceOneOnClick, RollChoiceTwoOnClick
+        };
+        for(int i = 0; i < 18; i++) {
+            clickableButtons[i].onClick.AddListener(listeners[i]);
         }
-        for (int i = 0; i < challengeCardsMedium.Count; i++) {
-            challengeCardsMedium[i].gameObject.SetActive(false);
-        }
-        for (int i = 0; i < challengeCardsHard.Count; i++) {
-            challengeCardsHard[i].gameObject.SetActive(false);
-        }
-        for (int i = 0; i < eventCardsEarly.Count; i++) {
-            eventCardsEarly[i].gameObject.SetActive(false);
-        }
-        for (int i = 0; i < eventCardsMid.Count; i++) {
-            eventCardsMid[i].gameObject.SetActive(false);
-        }
-        for (int i = 0; i < eventCardsLate.Count; i++) {
-            eventCardsLate[i].gameObject.SetActive(false);
-        }
-        for (int i = 0; i < mentorCards.Count; i++) {
-            mentorCards[i].gameObject.SetActive(false);
-        }
-        rollButton.onClick.AddListener(RollOnClick);
-        rollButton.gameObject.SetActive(false);
-        revealButton.onClick.AddListener(RevealOnClick);
-        revealButton.gameObject.SetActive(false);
-        acknowledgeEventButton.onClick.AddListener(AcknowledgeEventOnClick);
-        drawEarlyEventButton.onClick.AddListener(DrawEarlyOnClick);
-        drawMidEventButton.onClick.AddListener(DrawMidOnClick);
-        drawLateEventButton.onClick.AddListener(DrawLateOnClick);
-        challengeCorrectButton.gameObject.SetActive(false);
-        challengeIncorrectButton.gameObject.SetActive(false);
-        challengeCorrectButton.onClick.AddListener(ChallengeCorrectOnClick);
-        challengeIncorrectButton.onClick.AddListener(ChallengeIncorrectOnClick);
-        easyButton.onClick.AddListener(EasyOnClick);
-        mediumButton.onClick.AddListener(MediumOnClick);
-        hardButton.onClick.AddListener(HardOnClick);
-        nextPageButton.onClick.AddListener(NextPageOnClick);
-        previousPageButton.onClick.AddListener(PreviousPageOnClick);
-        checkMentorButton.onClick.AddListener(CheckMentorOnClick);
-        mentorBackButton.onClick.AddListener(MentorBackOnClick);
-        useMentorButton.onClick.AddListener(UseMentorOnClick);
-        rollChoiceOneButton.onClick.AddListener(RollChoiceOneOnClick);
-        rollChoiceTwoButton.onClick.AddListener(RollChoiceTwoOnClick);
-        difficultySelectionPanel.gameObject.SetActive(false);
-        challengePanel.gameObject.SetActive(false);
-        eventPanel.gameObject.SetActive(false);
-        earlyEventSelectionPanel.gameObject.SetActive(false);
-        midEventSelectionPanel.gameObject.SetActive(false);
-        lateEventSelectionPanel.gameObject.SetActive(false);
         StartCoroutine(StartGame());
     }
 
@@ -151,8 +82,7 @@ public class Game : MonoBehaviour
         Setup();
 
         // While there is still a meeple that is unfinished, take a turn
-        while (activeMeeples.Count > 0)
-        {
+        while (activeMeeples.Count > 0) {
             currentMeeple = activeMeeples[0];
             yield return Turn(currentMeeple);
             activeMeeples.RemoveAt(0);
@@ -182,17 +112,13 @@ public class Game : MonoBehaviour
         rulesPanel.gameObject.SetActive(true);
 
         // Shuffle the 3 types of challenge cards, 3 types of event cards, and mentor cards
-        challengeCardsEasy = ShuffleList(challengeCardsEasy);
-        challengeCardsMedium = ShuffleList(challengeCardsMedium);
-        challengeCardsHard = ShuffleList(challengeCardsHard);
-        eventCardsEarly = ShuffleList(eventCardsEarly);
-        eventCardsMid = ShuffleList(eventCardsMid);
-        eventCardsLate = ShuffleList(eventCardsLate);
-        mentorCards = ShuffleList(mentorCards);
+        for (int i = 0; i < decks.Count; i++) {
+            decks[i] = ShuffleList(decks[i]);
+        }
 
+        // Each player chooses a meeple and place it at the path's start
         Square startSquare = squares[0].GetComponent<Square>();
         for (int i = 0; i < GlobalValues.numPlayers; i++) {
-            // Each player chooses a meeple and place it at the path's start
             GameObject meeple = Instantiate(meeplePrefab, new Vector3(startSquare.GetX(), 0, startSquare.GetZ()), Quaternion.identity);
             meeple.GetComponent<Meeple>().SetColor(meepleColors[i]);
             meeple.GetComponent<Meeple>().SetColorString(meepleColorStrings[i]);
@@ -204,7 +130,7 @@ public class Game : MonoBehaviour
             meeples.Add(meeple);
             activeMeeples.Add(meeple);
 
-            // Each player draws a Mentor Card
+            // Each player also draws a Mentor Card
             meeple.GetComponent<Meeple>().SetMentorCard(mentorCards[i]);
         }
     }
@@ -217,39 +143,28 @@ public class Game : MonoBehaviour
         // Update the current player
         Meeple meeple = currentObject.GetComponent<Meeple>();
         GlobalValues.currentPlayer = meeple;
-        turnText.SetText("It's " + meeple.GetName() + "'s turn!");
         challengePointsText.SetText("Challenge Points: " + meeple.GetChallengePoints());
-
-        // Register the event
+        turnText.SetText("It's " + meeple.GetName() + "'s turn!");
         RegisterEvent("It's " + meeple.GetName() + "'s turn!");
         
-        // Play your mentor card if you wish
-        if (!meeple.MentorCardUsed()) {
-            mentorIcon.gameObject.SetActive(true);
-            checkMentorButton.gameObject.SetActive(true);
-        } else {
-            mentorIcon.gameObject.SetActive(false);
-            checkMentorButton.gameObject.SetActive(false);
-        }
+        // Display the player's mentor card if it has not been used
+        mentorIcon.gameObject.SetActive(!meeple.MentorCardUsed());
+        checkMentorButton.gameObject.SetActive(!meeple.MentorCardUsed());
 
         // Roll the die or coin according to the life stage
         yield return WaitForRoll();
         RegisterEvent(meeple.GetName() + " rolled a " + currentRoll + ".");
+        yield return Move(currentObject, currentRoll);
+
+        // Hide the mentor card
         mentorIcon.gameObject.SetActive(false);
         checkMentorButton.gameObject.SetActive(false);
 
-        // Move the meeple forward
-        yield return Move(currentObject, currentRoll);
-
+        // Handle events and challenges
         Square currentSquare = meeple.GetCurrentSquare().GetComponent<Square>();
-        // If you land on an Event Square, draw an Event Card
         if (currentSquare.isEvent) {
-            string stage = currentSquare.stage;
-            yield return HandleEvent(stage);
-        }
-        
-        // If you land on a Challenge Square, draw a Challenge Card
-        if (currentSquare.isChallenge) {
+            yield return HandleEvent(currentSquare.stage);
+        } else if (currentSquare.isChallenge) {
             yield return HandleChallenge();
         }
 
@@ -258,51 +173,47 @@ public class Game : MonoBehaviour
             // Roll the die or coin according to the life stage
             yield return WaitForRoll();
             RegisterEvent(meeple.GetName() + " rolled a " + currentRoll + ".");
-            mentorIcon.gameObject.SetActive(false);
-            checkMentorButton.gameObject.SetActive(false);
-
-            // Move the meeple forward
             yield return Move(currentObject, currentRoll);
 
+            // Handle events and challenges
             currentSquare = meeple.GetCurrentSquare().GetComponent<Square>();
-            // If you land on an Event Square, draw an Event Card
             if (currentSquare.isEvent) {
-                string stage = currentSquare.stage;
-                yield return HandleEvent(stage);
-            }
-            
-            // If you land on a Challenge Square, draw a Challenge Card
-            if (currentSquare.isChallenge) {
+                yield return HandleEvent(currentSquare.stage);
+            } else if (currentSquare.isChallenge) {
                 yield return HandleChallenge();
             }
-        }
-
-        // Reset current powerup
-        mentorToUse = "";
+        }    
+        mentorToUse = "";    
     }
 
     // Handles when a player lands on an event square
     public IEnumerator HandleEvent(string stage)
     {
-        // Check if there is an event card in the deck
+        // Determine the deck based on the stage
         List<GameObject> deck;
+        GameObject panel;
         if (stage == "early") {
             deck = eventCardsEarly;
+            panel = earlyEventSelectionPanel;
         } else if (stage == "mid") {
             deck = eventCardsMid;
+            panel = midEventSelectionPanel;
         } else {
             deck = eventCardsLate;
+            panel = lateEventSelectionPanel;
         }
+
+        // Check if there are cards left in the deck
         if (deck.Count > 0) {
-            yield return WaitForDrawEvent(stage);
-            yield return WaitForAcknowledgeEvent(stage);
+            yield return WaitForDrawEvent(panel);
+            yield return WaitForAcknowledgeEvent(deck);
             yield return Move(currentMeeple, currentEventMoveEffect);
+
+            // Register the move event
             string playerName = currentMeeple.GetComponent<Meeple>().GetName();
-            if (currentEventMoveEffect < 0) {
-                RegisterEvent(playerName + " moved backward " + (currentEventMoveEffect * -1) + " spaces from an event.");
-            } else {
-                RegisterEvent(playerName + " moved forward " + currentEventMoveEffect + " spaces from an event!");
-            }
+            string direction = currentEventMoveEffect < 0? "backward": "forward";
+            int numSpaces = currentEventMoveEffect < 0? (currentEventMoveEffect * -1): currentEventMoveEffect;
+            RegisterEvent(playerName + " moved " + direction + " " + numSpaces + " spaces from an event.");
         } else {
             RegisterEvent("The " + stage + "-life Event Card deck ran out of cards.");
         }
@@ -315,10 +226,9 @@ public class Game : MonoBehaviour
         yield return DoChallenge(currentDifficulty);
     }
 
+    // Let the player choose a deck to draw from and answer the challenge question
     public IEnumerator DoChallenge(string difficulty)
     {
-        challengePanel.gameObject.SetActive(true);
-        
         // Determine which deck to draw from
         List<GameObject> deck;
         int points;
@@ -333,79 +243,55 @@ public class Game : MonoBehaviour
             points = 3;
         }
 
-        // Draw the card
+        // Draw the card and show it
         GameObject currentCard = deck[0];
         deck.RemoveAt(0);
+        challengePanel.gameObject.SetActive(true);
         currentCard.gameObject.SetActive(true);
         deck.Add(currentCard);
 
         // Let the player answer
         yield return WaitForReveal();
         yield return WaitForChallengeEval();
-        string playerName = currentMeeple.GetComponent<Meeple>().GetName();
+        currentCard.gameObject.SetActive(false);
+        challengePanel.gameObject.SetActive(false);
+
+        // Handle challenge result
+        string playerName = GlobalValues.currentPlayer.GetName();
         if (challengeCorrect) {
-            currentMeeple.GetComponent<Meeple>().IncrementChallengePoints(points);
-            challengePointsText.SetText("Challenge Points: " + currentMeeple.GetComponent<Meeple>().GetChallengePoints());
+            GlobalValues.currentPlayer.IncrementChallengePoints(points);
+            challengePointsText.SetText("Challenge Points: " + GlobalValues.currentPlayer.GetChallengePoints());
             RegisterEvent(playerName + " answered correctly and gained " + points + " Challenge Points!");
         } else {
             RegisterEvent(playerName + " answered incorrectly."); 
         }
-        currentCard.gameObject.SetActive(false);
-        challengePanel.gameObject.SetActive(false);
     }
 
     // Waits for the player to click "OK" after reading an event
-    public IEnumerator WaitForAcknowledgeEvent(string stage)
+    public IEnumerator WaitForAcknowledgeEvent(List<GameObject> deck)
     {
-        eventPanel.gameObject.SetActive(true);
-
-        // Determine which deck to draw from
-        List<GameObject> deck;
-        if (stage == "early") {
-            deck = eventCardsEarly;
-        } else if (stage == "mid") {
-            deck = eventCardsMid;
-        } else {
-            deck = eventCardsLate;
-        }
-
-        // Draw the card
+        // Draw the card and show it
         GameObject currentCard = deck[0];
         deck.RemoveAt(0);
+        eventPanel.gameObject.SetActive(true);
         currentCard.gameObject.SetActive(true);
         currentEventMoveEffect = currentCard.GetComponent<EventCard>().moveEffect;
         communityCards.Add(currentCard);
 
         // Let the player acknowledge
         eventAcknowledged = false;
-        while (!eventAcknowledged) {
-            yield return null;
-        }
+        while (!eventAcknowledged) yield return null;
         currentCard.gameObject.SetActive(false);
         eventPanel.gameObject.SetActive(false);
     }
 
     // Waits for the player to click "DRAW" button
-    public IEnumerator WaitForDrawEvent(string stage)
+    public IEnumerator WaitForDrawEvent(GameObject selectionPanel)
     {
         eventCardDrawn = false;
-        if (stage == "early") {
-            earlyEventSelectionPanel.gameObject.SetActive(true);
-        } else if (stage == "mid") {
-            midEventSelectionPanel.gameObject.SetActive(true);
-        } else {
-            lateEventSelectionPanel.gameObject.SetActive(true);
-        }
-        while (!eventCardDrawn) {
-            yield return null;
-        }
-        if (stage == "early") {
-            earlyEventSelectionPanel.gameObject.SetActive(false);
-        } else if (stage == "mid") {
-            midEventSelectionPanel.gameObject.SetActive(false);
-        } else {
-            lateEventSelectionPanel.gameObject.SetActive(false);
-        } 
+        selectionPanel.gameObject.SetActive(true);
+        while (!eventCardDrawn) yield return null;
+        selectionPanel.gameObject.SetActive(false);
     }
 
     // Waits for the player to click "ANSWER CORRECT" or "ANSWER INCORRECT"
@@ -414,9 +300,7 @@ public class Game : MonoBehaviour
         challengeEvaluated = false;
         challengeCorrectButton.gameObject.SetActive(true);
         challengeIncorrectButton.gameObject.SetActive(true);
-        while (!challengeEvaluated) {
-            yield return null;
-        }
+        while (!challengeEvaluated) yield return null;
         challengeCorrectButton.gameObject.SetActive(false);
         challengeIncorrectButton.gameObject.SetActive(false);
     }
@@ -426,9 +310,7 @@ public class Game : MonoBehaviour
     {
         difficultySelected = false;
         difficultySelectionPanel.gameObject.SetActive(true);
-        while (!difficultySelected) {
-            yield return null;
-        }
+        while (!difficultySelected) yield return null;
         difficultySelectionPanel.gameObject.SetActive(false);
     }
 
@@ -437,116 +319,58 @@ public class Game : MonoBehaviour
     {
         revealed = false;
         revealButton.gameObject.SetActive(true);
-        while(!revealed) {
-            yield return null;
-        }
+        while(!revealed) yield return null;
         revealButton.gameObject.SetActive(false);
     }
 
     // Waits for the Roll button to be clicked
     public IEnumerator WaitForRoll()
     {
-        // if (isUsingAlternateFuture) {
-        //     rollButton.gameObject.SetActive(true);
+        bool rollingTwice = false;
 
-        //     // First roll
-        //     rolled = false;
-        //     while (!rolled) {
-        //         yield return null;
-        //     }
-        //     int outcomeOne = currentRoll;
-        //     rollChoiceOneButton.gameObject.SetActive(true);
-        //     rollChoiceOneButtonText.text = "" + currentRoll;
-        //     rollChoiceOneButton.enabled = false;
-        //     rollChoiceHintText.gameObject.SetActive(true);
-        //     rollChoiceHintText.text = "ROLL A SECOND TIME";
-
-        //     // Second roll
-        //     rolled = false;
-        //     while (!rolled) {
-        //         yield return null;
-        //     }
-        //     int outcomeTwo = currentRoll;
-        //     rollChoiceTwoButton.gameObject.SetActive(true);
-        //     rollChoiceTwoButtonText.text = "" + currentRoll;
-        //     rollChoiceOneButton.enabled = true;
-        //     rollChoiceHintText.text = "CHOOSE THE BETTER ROLL";
-
-        //     // Hide the roll button
-        //     rollButton.gameObject.SetActive(false);
-
-        //     // Wait for the player's choice between the two rolls
-        //     rollChoiceChosen = "";
-        //     while (rollChoiceChosen != "") {
-        //         yield return null;
-        //     }
-        //     if (rollChoiceChosen == "one") {
-        //         currentRoll = outcomeOne;
-        //     } else if (rollChoiceChosen == "two") {
-        //         currentRoll = outcomeTwo;
-        //     }
-        //     rollChoiceOneButton.gameObject.SetActive(false);
-        //     rollChoiceTwoButton.gameObject.SetActive(false);
-        //     rollChoiceHintText.gameObject.SetActive(false);
-        // } else {
-            bool rollingTwice = false;
-            rolled = false;
-            rollButton.gameObject.SetActive(true);
-            while(!rolled) {
-                // If mentor card gives inspiration boost, they get to do a challenge right now
-                if (mentorToUse == "Inspiration Boost") {
-                    yield return HandleChallenge();
-                    mentorToUse = "";
-                }
-                // If mentor card gives alternate future, they get to roll twice and choose the better one
-                if (mentorToUse == "Alternate Future") {
-                    rollingTwice = true;
-                }
-                yield return null;
-            }
-
-            // Handling the second roll if alternate future
-            if (rollingTwice) {
+        // First roll
+        rolled = false;
+        rollButton.gameObject.SetActive(true);
+        while(!rolled) {
+            // If mentor card gives inspiration boost, they get to do a challenge right now
+            if (mentorToUse == "Inspiration Boost") {
+                yield return HandleChallenge();
                 mentorToUse = "";
-                int outcomeOne = currentRoll;
-                Debug.Log("outcomeOne: " + outcomeOne);
-                rollChoiceOneButton.gameObject.SetActive(true);
-                rollChoiceOneButtonText.text = "" + currentRoll;
-                rollChoiceOneButton.enabled = false;
-                rollChoiceHintText.gameObject.SetActive(true);
-                rollChoiceHintText.text = "ROLL A SECOND TIME";
-
-                // Second roll
-                rolled = false;
-                while (!rolled) {
-                    yield return null;
-                }
-                int outcomeTwo = currentRoll;
-                rollChoiceTwoButton.gameObject.SetActive(true);
-                rollChoiceTwoButtonText.text = "" + currentRoll;
-                rollChoiceOneButton.enabled = true;
-                rollChoiceHintText.text = "CHOOSE THE BETTER ROLL";
-
-                // Hide the roll button
-                rollButton.gameObject.SetActive(false);
-
-                // Wait for the player's choice between the two rolls
-                rollChoiceChosen = "";
-                while (rollChoiceChosen == "") {
-                    yield return null;
-                }
-                if (rollChoiceChosen == "one") {
-                    currentRoll = outcomeOne;
-                } else if (rollChoiceChosen == "two") {
-                    currentRoll = outcomeTwo;
-                }
-                rollChoiceOneButton.gameObject.SetActive(false);
-                rollChoiceTwoButton.gameObject.SetActive(false);
-                rollChoiceHintText.gameObject.SetActive(false);
             }
+            // If mentor card gives alternate future, they get to roll twice and choose the better one
+            rollingTwice = mentorToUse == "Alternate Future";
+            yield return null;
+        }
 
+        // Handling the second roll if alternate future
+        if (rollingTwice) {
+            mentorToUse = "";
+            int outcomeOne = currentRoll;
+            rollChoiceOneButton.gameObject.SetActive(true);
+            rollChoiceOneButtonText.text = "" + currentRoll;
+            rollChoiceOneButton.enabled = false;
+            rollChoiceHintText.gameObject.SetActive(true);
+            rollChoiceHintText.text = "ROLL A SECOND TIME";
+
+            // Second roll
+            rolled = false;
+            while (!rolled) yield return null;
+            int outcomeTwo = currentRoll;
+            rollChoiceTwoButton.gameObject.SetActive(true);
+            rollChoiceTwoButtonText.text = "" + currentRoll;
+            rollChoiceOneButton.enabled = true;
+            rollChoiceHintText.text = "CHOOSE THE BETTER ROLL";
             rollButton.gameObject.SetActive(false);
-        // }
+
+            // Wait for the player's choice between the two rolls
+            rollChoiceChosen = "";
+            while (rollChoiceChosen == "") yield return null;
+            currentRoll = rollChoiceChosen == "one"? outcomeOne: outcomeTwo;
+            rollChoiceOneButton.gameObject.SetActive(false);
+            rollChoiceTwoButton.gameObject.SetActive(false);
+            rollChoiceHintText.gameObject.SetActive(false);
+        }
+        rollButton.gameObject.SetActive(false);
     }
 
     // Moves the currentObject (a Meeple) by currentRoll number of spaces on the board
@@ -559,18 +383,17 @@ public class Game : MonoBehaviour
             spaces *= -1;
         }
 
+        Meeple meeple = currentObject.GetComponent<Meeple>();
         for (int i = 0; i < spaces; i++) {
             // If hit "finish" square while moving, go backwards
-            if (currentObject.GetComponent<Meeple>().GetCurrentPathIndex() == 46) {
-                direction = -1;
-            }
+            if (meeple.GetCurrentPathIndex() == 46) direction = -1;
 
             // Get target position
-            int currentPathIndex = currentObject.GetComponent<Meeple>().GetCurrentPathIndex() + direction;
+            int currentPathIndex = meeple.GetCurrentPathIndex() + direction;
             float endX = squares[currentPathIndex].GetComponent<Square>().GetX();
             float endZ = squares[currentPathIndex].GetComponent<Square>().GetZ();
             Vector3 endPosition = new Vector3(endX, currentObject.transform.position.y, endZ);
-            endPosition += currentObject.GetComponent<Meeple>().GetPositionShift();
+            endPosition += meeple.GetPositionShift();
 
             // Move the meeple to the next square in one second
             float elapsedTime = 0f;
@@ -582,33 +405,29 @@ public class Game : MonoBehaviour
                 yield return new WaitForEndOfFrame();
             }
             currentObject.transform.position = endPosition;
-            currentObject.GetComponent<Meeple>().SetCurrentPathIndex(currentPathIndex);
-            currentObject.GetComponent<Meeple>().SetCurrentSquare(squares[currentPathIndex]);
+            meeple.SetCurrentPathIndex(currentPathIndex);
+            meeple.SetCurrentSquare(squares[currentPathIndex]);
             yield return new WaitForSeconds(0.05f);
 
             // If hit "start" square while moving, just stop
-            if (currentObject.GetComponent<Meeple>().GetCurrentPathIndex() == 0) {
-                break;
-            }
+            if (currentObject.GetComponent<Meeple>().GetCurrentPathIndex() == 0) break;
         }
 
         // If end on "finish" square, the meeple is done
-        if (currentObject.GetComponent<Meeple>().GetCurrentPathIndex() == 46) {
+        if (meeple.GetCurrentPathIndex() == 46) {
             int numDone = GlobalValues.numPlayers - activeMeeples.Count;
             int rp = 6 - numDone;
-            currentObject.GetComponent<Meeple>().SetRankPoints(rp);
-            string playerName = currentObject.GetComponent<Meeple>().GetName();
-            RegisterEvent(playerName + " reached the end of their scientific journey and gained " + rp + " Rank Points!");
+            meeple.SetRankPoints(rp);
+            RegisterEvent(meeple.GetName() + " reached the end of their scientific journey and gained " + rp + " Rank Points!");
         }
     }
 
     // What happens when the Roll button is clicked
     void RollOnClick()
     {
-        int currentPathIndex = currentMeeple.GetComponent<Meeple>().GetCurrentPathIndex();
+        int currentPathIndex = GlobalValues.currentPlayer.GetCurrentPathIndex();
         string stage = squares[currentPathIndex].GetComponent<Square>().stage;
-        int minRoll = 0;
-        int maxRoll = 0;
+        int minRoll = 0, maxRoll = 0;
         if (stage == "early") {
             minRoll = 1;
             maxRoll = 4;
@@ -624,84 +443,59 @@ public class Game : MonoBehaviour
     }
 
     // Other button on click handlers
-    void EasyOnClick()
-    {
+    void EasyOnClick() {
         currentDifficulty = "easy";
         difficultySelected = true;
     }
-    void MediumOnClick()
-    {
+    void MediumOnClick() {
         currentDifficulty = "medium";
         difficultySelected = true;
     }
-    void HardOnClick()
-    {
+    void HardOnClick() {
         currentDifficulty = "hard";
         difficultySelected = true;
     }
-    void RevealOnClick()
-    {
+    void RevealOnClick() {
         revealed = true;
     }
-    void ChallengeCorrectOnClick()
-    {
+    void ChallengeCorrectOnClick() {
         challengeCorrect = true;
         challengeEvaluated = true;
     }
-    void ChallengeIncorrectOnClick()
-    {
+    void ChallengeIncorrectOnClick() {
         challengeCorrect = false;
         challengeEvaluated = true;
     }
-    void DrawEarlyOnClick()
-    {
+    void DrawEventCardOnClick() {
         eventCardDrawn = true;
     }
-    void DrawMidOnClick()
-    {
-        eventCardDrawn = true;
-    }
-    void DrawLateOnClick()
-    {
-        eventCardDrawn = true;
-    }
-    void AcknowledgeEventOnClick()
-    {
+    void AcknowledgeEventOnClick() {
         eventAcknowledged = true;
     }
-    void NextPageOnClick()
-    {
+    void NextPageOnClick() {
         if (currentRulesPageNumber < 3) {
-            for (int i = 0; i < rulesPages.Count; i++) {
-                rulesPages[i].gameObject.SetActive(false);
-            }
+            DeactivateAllItems(rulesPages);
             currentRulesPageNumber += 1;
             rulesPages[currentRulesPageNumber].gameObject.SetActive(true);
         }
     }
-    void PreviousPageOnClick()
-    {
+    void PreviousPageOnClick() {
         if (currentRulesPageNumber > 0) {
-            for (int i = 0; i < rulesPages.Count; i++) {
-                rulesPages[i].gameObject.SetActive(false);
-            }
+            DeactivateAllItems(rulesPages);
             currentRulesPageNumber -= 1;
             rulesPages[currentRulesPageNumber].gameObject.SetActive(true);
         } 
     }
-    void CheckMentorOnClick()
-    {
+    void CheckMentorOnClick() {
         mentorPanel.gameObject.SetActive(true);
-        currentMeeple.GetComponent<Meeple>().GetMentorCard().gameObject.SetActive(true);
+        GlobalValues.currentPlayer.GetMentorCard().gameObject.SetActive(true);
     }
-    void MentorBackOnClick()
-    {
+    void MentorBackOnClick() {
         mentorPanel.gameObject.SetActive(false);
-        currentMeeple.GetComponent<Meeple>().GetMentorCard().gameObject.SetActive(false);
+        GlobalValues.currentPlayer.GetMentorCard().gameObject.SetActive(false);
     }
-    void UseMentorOnClick()
-    {
-        mentorToUse = currentMeeple.GetComponent<Meeple>().GetMentorCard().GetComponent<MentorCard>().mentorName;
+    void UseMentorOnClick() {
+        mentorToUse = GlobalValues.currentPlayer.GetMentorCard().GetComponent<MentorCard>().mentorName;
 
         // Register the event
         string note = "";
@@ -712,31 +506,28 @@ public class Game : MonoBehaviour
         } else if (mentorToUse == "Extra Turn") {
             note = ", and gets an extra turn immediately after this one!";
         }
-        RegisterEvent(currentMeeple.GetComponent<Meeple>().GetName() + " used their mentor card " + mentorToUse + note);
+        RegisterEvent(GlobalValues.currentPlayer.GetName() + " used their mentor card " + mentorToUse + note);
 
-        // Mark the mentor card as used
-        currentMeeple.GetComponent<Meeple>().UseMentorCard();
+        // Mark the mentor card as used and close the panel
+        GlobalValues.currentPlayer.UseMentorCard();
         mentorIcon.gameObject.SetActive(false);
         checkMentorButton.gameObject.SetActive(false);
         MentorBackOnClick();
     }
-    void RollChoiceOneOnClick()
-    {
+    void RollChoiceOneOnClick() {
         rollChoiceChosen = "one";
     }
-    void RollChoiceTwoOnClick()
-    {
+    void RollChoiceTwoOnClick() {
         rollChoiceChosen = "two";
     }
 
-
+    // Shuffles a list of game objects
     public List<GameObject> ShuffleList(List<GameObject> list)
     {
         List<GameObject> temp = new List<GameObject>();
         List<GameObject> shuffled = new List<GameObject>();
         temp.AddRange(list);
-        for (int i = 0; i < list.Count; i++)
-        {
+        for (int i = 0; i < list.Count; i++) {
             int index = Random.Range(0, temp.Count - 1);
             shuffled.Add(temp[index]);
             temp.RemoveAt(index);
@@ -744,8 +535,23 @@ public class Game : MonoBehaviour
         return shuffled;
     }
 
+    // Registers an event to be shown on the log
     public void RegisterEvent(string s) {
         GlobalValues.events.Add(s);
+    }
+
+    // Deactivate all lists in a list
+    public void DeactivateAllLists(List<List<GameObject>> l) {
+        for (int i = 0; i < l.Count; i++) {
+            DeactivateAllItems(l[i]);
+        }
+    }
+
+    // Deactivates all items in a list
+    public void DeactivateAllItems(List<GameObject> l) {
+        for (int i = 0; i < l.Count; i++) {
+            l[i].gameObject.SetActive(false);
+        }
     }
 
     void Update() {
@@ -755,4 +561,3 @@ public class Game : MonoBehaviour
         }
     }
 }
-
