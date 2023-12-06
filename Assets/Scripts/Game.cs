@@ -14,16 +14,22 @@ public class Game : MonoBehaviour
     public List<GameObject> eventCardsEarly, eventCardsMid, eventCardsLate; // Event cards
     public List<GameObject> mentorCards; // Mentor cards
     public List<GameObject> rulesPages; // Rulebook
+    public List<GameObject> communitySlots; // There are 8 community area slots
+    
+    public List<TMP_Text> groupPlayerTexts, groupResultTexts; // Group challenges
+    public List<Button> groupCorrectButtons, groupIncorrectButtons; // Group challenges
 
-    public GameObject difficultySelectionPanel, challengePanel; // Challenge handling
+    public GameObject difficultySelectionPanel, challengePanel, groupChallengePanel; // Challenge handling
     public GameObject earlyEventSelectionPanel, midEventSelectionPanel, lateEventSelectionPanel, eventPanel; // Event handling
-    public GameObject menuPanel, rulesPanel, endingPanel, mentorPanel, mentorIcon; // Other UI objects
+    public GameObject communityPanel, menuPanel, rulesPanel, endingPanel, mentorPanel, mentorIcon, groupEvalHint; // Other UI objects
 
     public Button easyButton, mediumButton, hardButton, revealButton, challengeCorrectButton, challengeIncorrectButton; // Challenge buttons
     public Button drawEarlyEventButton, drawMidEventButton, drawLateEventButton, acknowledgeEventButton; // Event buttons
     public Button checkMentorButton, mentorBackButton, useMentorButton; // Mentor buttons
     public Button nextPageButton, previousPageButton; // Rulebook buttons
+    public Button checkCommunityButton, communityNextButton, communityPrevButton, communityBackButton; // Community area buttons
     public Button rollButton, rollChoiceOneButton, rollChoiceTwoButton; // Roll buttons
+    public Button groupRevealButton, groupDoneButton; // Group challenges
 
     public TMP_Text rollChoiceOneButtonText, rollChoiceTwoButtonText, rollChoiceHintText; // Roll texts
     public TMP_Text turnText, challengePointsText, statsText; // Other UI texts
@@ -33,8 +39,10 @@ public class Game : MonoBehaviour
     private List<GameObject> meeples = new List<GameObject>();
     private List<GameObject> activeMeeples = new List<GameObject>();
     private List<List<GameObject>> decks = new List<List<GameObject>>();
+    private List<bool> groupChallengeResults = new List<bool>();
     private int currentRoll, currentEventMoveEffect, currentRulesPageNumber = 0;
-    private bool rolled, eventCardDrawn, eventAcknowledged, difficultySelected, revealed, challengeEvaluated, challengeCorrect = false;
+    private int communityPageNumber = 0;
+    private bool rolled, eventCardDrawn, eventAcknowledged, difficultySelected, revealed, groupRevealed, groupDone, challengeEvaluated, challengeCorrect = false;
     private string currentDifficulty, rollChoiceChosen, mentorToUse = "";
 
     // Meeples
@@ -54,24 +62,37 @@ public class Game : MonoBehaviour
     {
         // Deactivate stuff
         decks = new List<List<GameObject>>{ challengeCardsEasy, challengeCardsMedium, challengeCardsHard, eventCardsEarly, eventCardsMid, eventCardsLate, mentorCards };
-        List<GameObject> buttons = new List<GameObject>{ rollButton.gameObject, revealButton.gameObject, challengeCorrectButton.gameObject, challengeIncorrectButton.gameObject };
-        List<GameObject> panels = new List<GameObject>{ difficultySelectionPanel, challengePanel, eventPanel, earlyEventSelectionPanel, midEventSelectionPanel, lateEventSelectionPanel };
+        List<GameObject> buttons = new List<GameObject>{ rollButton.gameObject, revealButton.gameObject, groupRevealButton.gameObject, challengeCorrectButton.gameObject, challengeIncorrectButton.gameObject, groupDoneButton.gameObject, groupRevealButton.gameObject };
+        List<GameObject> panels = new List<GameObject>{ difficultySelectionPanel, challengePanel, eventPanel, earlyEventSelectionPanel, midEventSelectionPanel, lateEventSelectionPanel, communityPanel, groupChallengePanel };
         DeactivateAllLists(decks);
         DeactivateAllItems(buttons);
         DeactivateAllItems(panels);
+        for (int i = 0; i < 4; i++) {
+            groupPlayerTexts[i].gameObject.SetActive(false);
+            groupResultTexts[i].gameObject.SetActive(false);
+            groupCorrectButtons[i].gameObject.SetActive(false);
+            groupIncorrectButtons[i].gameObject.SetActive(false);
+        }
+        groupEvalHint.gameObject.SetActive(false);
 
         // Assign button listeners
         Button[] clickableButtons = { 
             rollButton, revealButton, acknowledgeEventButton, drawEarlyEventButton, drawMidEventButton, drawLateEventButton,
             challengeCorrectButton, challengeIncorrectButton, easyButton, mediumButton, hardButton, nextPageButton, previousPageButton,
-            checkMentorButton, mentorBackButton, useMentorButton, rollChoiceOneButton, rollChoiceTwoButton
+            checkMentorButton, mentorBackButton, useMentorButton, rollChoiceOneButton, rollChoiceTwoButton, checkCommunityButton,
+            communityNextButton, communityPrevButton, communityBackButton, groupRevealButton, groupDoneButton,
+            groupCorrectButtons[0], groupCorrectButtons[1], groupCorrectButtons[2], groupCorrectButtons[3],
+            groupIncorrectButtons[0], groupIncorrectButtons[1], groupIncorrectButtons[2], groupIncorrectButtons[3]
         };
         UnityAction[] listeners = {
             RollOnClick, RevealOnClick, AcknowledgeEventOnClick, DrawEventCardOnClick, DrawEventCardOnClick, DrawEventCardOnClick,
             ChallengeCorrectOnClick, ChallengeIncorrectOnClick, EasyOnClick, MediumOnClick, HardOnClick, NextPageOnClick, PreviousPageOnClick,
-            CheckMentorOnClick, MentorBackOnClick, UseMentorOnClick, RollChoiceOneOnClick, RollChoiceTwoOnClick
+            CheckMentorOnClick, MentorBackOnClick, UseMentorOnClick, RollChoiceOneOnClick, RollChoiceTwoOnClick, CommunityOnClick,
+            CommunityNextOnClick, CommunityPrevOnClick, CommunityBackOnClick, GroupRevealOnClick, GroupDoneOnClick,
+            GroupCorrectOnClick1, GroupCorrectOnClick2, GroupCorrectOnClick3, GroupCorrectOnClick4,
+            GroupIncorrectOnClick1, GroupIncorrectOnClick2, GroupIncorrectOnClick3, GroupIncorrectOnClick4
         };
-        for(int i = 0; i < 18; i++) {
+        for(int i = 0; i < 32; i++) {
             clickableButtons[i].onClick.AddListener(listeners[i]);
         }
         StartCoroutine(StartGame());
@@ -112,9 +133,13 @@ public class Game : MonoBehaviour
         rulesPanel.gameObject.SetActive(true);
 
         // Shuffle the 3 types of challenge cards, 3 types of event cards, and mentor cards
-        for (int i = 0; i < decks.Count; i++) {
-            decks[i] = ShuffleList(decks[i]);
-        }
+        challengeCardsEasy = ShuffleList(challengeCardsEasy);
+        challengeCardsMedium = ShuffleList(challengeCardsMedium);
+        challengeCardsHard = ShuffleList(challengeCardsHard);
+        eventCardsEarly = ShuffleList(eventCardsEarly);
+        eventCardsMid = ShuffleList(eventCardsMid);
+        eventCardsLate = ShuffleList(eventCardsLate);
+        mentorCards = ShuffleList(mentorCards);
 
         // Each player chooses a meeple and place it at the path's start
         Square startSquare = squares[0].GetComponent<Square>();
@@ -126,6 +151,7 @@ public class Game : MonoBehaviour
             meeple.GetComponent<Meeple>().SetCurrentSquare(squares[0]);
             meeple.GetComponent<Meeple>().SetPositionShift(positionShifts[i]);
             meeple.GetComponent<Meeple>().SetName("Player " + (i+1) + " (" + meepleColorStrings[i] + ")");
+            meeple.GetComponent<Meeple>().SetPlayerIndex(i);
             meeple.transform.position += positionShifts[i];
             meeples.Add(meeple);
             activeMeeples.Add(meeple);
@@ -246,25 +272,65 @@ public class Game : MonoBehaviour
         // Draw the card and show it
         GameObject currentCard = deck[0];
         deck.RemoveAt(0);
-        challengePanel.gameObject.SetActive(true);
-        currentCard.gameObject.SetActive(true);
         deck.Add(currentCard);
 
-        // Let the player answer
-        yield return WaitForReveal();
-        yield return WaitForChallengeEval();
+        if (currentCard.GetComponent<ChallengeCard>().isGroupChallenge) {
+            groupChallengePanel.gameObject.SetActive(true);
+            currentCard.gameObject.SetActive(true);
+
+            // Let the players go around and answer
+            yield return WaitForGroupChallengeReveal();
+            currentCard.gameObject.SetActive(false);
+            yield return WaitForGroupChallengeEval();
+
+            // Handle challenge result
+            List<string> correctPlayerNames = new List<string>();
+            for (int i = 0; i < activeMeeples.Count; i++) {
+                Meeple meeple = activeMeeples[i].GetComponent<Meeple>();
+                if (groupChallengeResults[meeple.GetPlayerIndex()]) {
+                    meeple.IncrementChallengePoints(points);
+                    correctPlayerNames.Add(meeple.GetName());
+                }
+            }
+
+            // Register the group challenge event on the log
+            string displayText = "";
+            if (correctPlayerNames.Count == 0) {
+                displayText = "No one";
+            } else if (correctPlayerNames.Count == 1) {
+                displayText = correctPlayerNames[0];
+            } else if (correctPlayerNames.Count == 2) {
+                displayText = correctPlayerNames[0] + " and " + correctPlayerNames[1];
+            } else {
+                for (int i = 0; i < correctPlayerNames.Count - 1; i++) {
+                    displayText += correctPlayerNames[i] + ", ";
+                }
+                displayText += "and " + correctPlayerNames[correctPlayerNames.Count - 1];
+            }
+            displayText += " answered the Group Challenge correctly and gained " + points + " points!";
+            RegisterEvent(displayText);
+        } else {
+            challengePanel.gameObject.SetActive(true);
+            currentCard.gameObject.SetActive(true);
+
+            // Let the player answer
+            yield return WaitForReveal();
+            yield return WaitForChallengeEval();
+
+            // Handle challenge result
+            string playerName = GlobalValues.currentPlayer.GetName();
+            if (challengeCorrect) {
+                GlobalValues.currentPlayer.IncrementChallengePoints(points);
+                RegisterEvent(playerName + " answered correctly and gained " + points + " Challenge Points!");
+            } else {
+                RegisterEvent(playerName + " answered incorrectly."); 
+            }
+        }
+
+        // Hide the card and challenge panel
+        challengePointsText.SetText("Challenge Points: " + GlobalValues.currentPlayer.GetChallengePoints());
         currentCard.gameObject.SetActive(false);
         challengePanel.gameObject.SetActive(false);
-
-        // Handle challenge result
-        string playerName = GlobalValues.currentPlayer.GetName();
-        if (challengeCorrect) {
-            GlobalValues.currentPlayer.IncrementChallengePoints(points);
-            challengePointsText.SetText("Challenge Points: " + GlobalValues.currentPlayer.GetChallengePoints());
-            RegisterEvent(playerName + " answered correctly and gained " + points + " Challenge Points!");
-        } else {
-            RegisterEvent(playerName + " answered incorrectly."); 
-        }
     }
 
     // Waits for the player to click "OK" after reading an event
@@ -305,6 +371,37 @@ public class Game : MonoBehaviour
         challengeIncorrectButton.gameObject.SetActive(false);
     }
 
+    // Waits for all players to click "ANSWER CORRECT" or "ANSWER INCORRECT"
+    public IEnumerator WaitForGroupChallengeEval()
+    {
+        groupDone = false;
+
+        // Show the eval interface
+        groupEvalHint.gameObject.SetActive(true);
+        groupDoneButton.gameObject.SetActive(true);
+        for (int i = 0; i < activeMeeples.Count; i++) {
+            int playerIndex = activeMeeples[i].GetComponent<Meeple>().GetPlayerIndex();
+            groupPlayerTexts[playerIndex].gameObject.SetActive(true);
+            groupResultTexts[playerIndex].gameObject.SetActive(true);
+            groupResultTexts[playerIndex].GetComponent<TMP_Text>().text = "";
+            groupCorrectButtons[playerIndex].gameObject.SetActive(true);
+            groupIncorrectButtons[playerIndex].gameObject.SetActive(true);
+        }
+        groupChallengeResults = new List<bool>{false, false, false, false};
+        while (!groupDone) yield return null;
+
+        // Hide the eval interface
+        groupEvalHint.gameObject.SetActive(false);
+        groupDoneButton.gameObject.SetActive(false);
+        for (int i = 0; i < activeMeeples.Count; i++) {
+            int playerIndex = activeMeeples[i].GetComponent<Meeple>().GetPlayerIndex();
+            groupPlayerTexts[playerIndex].gameObject.SetActive(false);
+            groupResultTexts[playerIndex].gameObject.SetActive(false);
+            groupCorrectButtons[playerIndex].gameObject.SetActive(false);
+            groupIncorrectButtons[playerIndex].gameObject.SetActive(false);
+        }
+    }
+
     // Waits for the difficulty to be selected
     public IEnumerator WaitForDifficultySelection()
     {
@@ -321,6 +418,14 @@ public class Game : MonoBehaviour
         revealButton.gameObject.SetActive(true);
         while(!revealed) yield return null;
         revealButton.gameObject.SetActive(false);
+    }
+
+    // Waits for the group challenge reveal button to be clicked
+    public IEnumerator WaitForGroupChallengeReveal()
+    {
+        groupRevealed = false;
+        groupRevealButton.gameObject.SetActive(true);
+        while(!groupRevealed) yield return null;
     }
 
     // Waits for the Roll button to be clicked
@@ -458,6 +563,10 @@ public class Game : MonoBehaviour
     void RevealOnClick() {
         revealed = true;
     }
+    void GroupRevealOnClick() {
+        groupRevealed = true;
+        communityPanel.gameObject.SetActive(true);
+    }
     void ChallengeCorrectOnClick() {
         challengeCorrect = true;
         challengeEvaluated = true;
@@ -520,6 +629,78 @@ public class Game : MonoBehaviour
     void RollChoiceTwoOnClick() {
         rollChoiceChosen = "two";
     }
+    void CommunityOnClick() {
+        communityPanel.gameObject.SetActive(true);
+        for (int i = 0; i < 8; i++) {
+            int index = communityPageNumber * 8 + i;
+            if (index < communityCards.Count) {
+                communitySlots[i].GetComponent<RawImage>().texture = communityCards[i].GetComponent<RawImage>().texture;
+            }
+        }
+    }
+    void CommunityNextOnClick() {
+        float numPages = communityCards.Count / 8f;
+        if (communityPageNumber < numPages - 1) {
+            communityPageNumber += 1;
+            for (int i = 0; i < 8; i++) {
+                int index = communityPageNumber * 8 + i;
+                communitySlots[i].GetComponent<RawImage>().texture = null;
+                if (index < communityCards.Count) {
+                    communitySlots[i].GetComponent<RawImage>().texture = communityCards[index].GetComponent<RawImage>().texture;
+                }
+            }
+        }
+    }
+    void CommunityPrevOnClick() {
+        if (communityPageNumber > 0) {
+            communityPageNumber -= 1;
+            for (int i = 0; i < 8; i++) {
+                int index = communityPageNumber * 8 + i;
+                if (index < communityCards.Count) {
+                    communitySlots[i].GetComponent<RawImage>().texture = communityCards[i].GetComponent<RawImage>().texture;
+                }
+            }
+        }
+    }
+    void CommunityBackOnClick() {
+        communityPanel.gameObject.SetActive(false);
+    }
+    void GroupDoneOnClick() {
+        groupDone = true;
+    }
+    void GroupCorrectOnClick1() {
+        groupChallengeResults[0] = true;
+        groupResultTexts[0].GetComponent<TMP_Text>().text = "CORRECT";
+    }
+    void GroupCorrectOnClick2() {
+        groupChallengeResults[1] = true;
+        groupResultTexts[1].GetComponent<TMP_Text>().text = "CORRECT";
+    }
+    void GroupCorrectOnClick3() {
+        groupChallengeResults[2] = true;
+        groupResultTexts[2].GetComponent<TMP_Text>().text = "CORRECT";
+    }
+    void GroupCorrectOnClick4() {
+        groupChallengeResults[3] = true;
+        groupResultTexts[3].GetComponent<TMP_Text>().text = "CORRECT";
+    }
+    void GroupIncorrectOnClick1() {
+        groupChallengeResults[0] = false;
+        groupResultTexts[0].GetComponent<TMP_Text>().text = "INCORRECT";
+    }
+    void GroupIncorrectOnClick2() {
+        groupChallengeResults[1] = false;
+        groupResultTexts[1].GetComponent<TMP_Text>().text = "INCORRECT";
+    }
+    void GroupIncorrectOnClick3() {
+        groupChallengeResults[2] = false;
+        groupResultTexts[2].GetComponent<TMP_Text>().text = "INCORRECT";
+    }
+    void GroupIncorrectOnClick4() {
+        groupChallengeResults[3] = false;
+        groupResultTexts[3].GetComponent<TMP_Text>().text = "INCORRECT";
+    }
+    
 
     // Shuffles a list of game objects
     public List<GameObject> ShuffleList(List<GameObject> list)

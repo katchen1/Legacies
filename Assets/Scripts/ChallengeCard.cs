@@ -5,6 +5,7 @@ using UnityEngine;
 public class ChallengeCard : MonoBehaviour
 {
     public string difficulty;
+    public bool isGroupChallenge = false;
 
     public int GetPoints() {
         if (difficulty == "easy") {

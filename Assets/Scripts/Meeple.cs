@@ -12,6 +12,7 @@ public class Meeple : MonoBehaviour
     private int rankPoints = 0;
     private int challengePoints = 0;
     private int currentPathIndex = 0;
+    private int playerIndex;
     private string playerName;
     private string colorString;
     private Color color;
@@ -83,6 +84,14 @@ public class Meeple : MonoBehaviour
 
     public int GetCurrentPathIndex() {
         return currentPathIndex;
+    }
+
+    public void SetPlayerIndex(int i) {
+        playerIndex = i;
+    }
+
+    public int GetPlayerIndex() {
+        return playerIndex;
     }
 
     public void SetName(string s) {
