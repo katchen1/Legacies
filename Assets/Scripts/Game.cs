@@ -11,6 +11,7 @@ public class Game : MonoBehaviour
     public GameObject[] squares;
 
     public List<GameObject> challengeCardsEasy, challengeCardsMedium, challengeCardsHard; // Challenge cards
+    public List<GameObject> dualCardsEasy, dualCardsMedium, dualCardsHard; // Dual challenge cards
     public List<GameObject> eventCardsEarly, eventCardsMid, eventCardsLate; // Event cards
     public List<GameObject> mentorCards; // Mentor cards
     public List<GameObject> rulesPages; // Rulebook
@@ -22,6 +23,9 @@ public class Game : MonoBehaviour
     public GameObject difficultySelectionPanel, challengePanel, groupChallengePanel; // Challenge handling
     public GameObject earlyEventSelectionPanel, midEventSelectionPanel, lateEventSelectionPanel, eventPanel; // Event handling
     public GameObject communityPanel, menuPanel, rulesPanel, endingPanel, mentorPanel, mentorIcon, groupEvalHint; // Other UI objects
+    public GameObject onboardingPanel, obSetup, obHowToWin, obMentor, obRoll, obEvent, obChallenge, obCommunity, obFinish; // Onboarding
+    public GameObject dualChallengePanel; // Dual challenge
+
 
     public Button easyButton, mediumButton, hardButton, revealButton, challengeCorrectButton, challengeIncorrectButton; // Challenge buttons
     public Button drawEarlyEventButton, drawMidEventButton, drawLateEventButton, acknowledgeEventButton; // Event buttons
@@ -30,19 +34,24 @@ public class Game : MonoBehaviour
     public Button checkCommunityButton, communityNextButton, communityPrevButton, communityBackButton; // Community area buttons
     public Button rollButton, rollChoiceOneButton, rollChoiceTwoButton; // Roll buttons
     public Button groupRevealButton, groupDoneButton; // Group challenges
-
+    public Button obSetupButton, obHowToWinButton, obMentorButton, obRollButton, obEventButton, obChallengeButton, obCommunityButton, obFinishButton; // Onboarding buttons
+    public Button dualRevealButton, dualIncorrect1Button, dualCorrect1Button, dualIncorrect2Button, dualCorrect2Button, dualLeftButton, dualRightButton, dualDoneButton; // Dual challenge
     public TMP_Text rollChoiceOneButtonText, rollChoiceTwoButtonText, rollChoiceHintText; // Roll texts
     public TMP_Text turnText, challengePointsText, statsText; // Other UI texts
+    public TMP_Text dualName1Text, dualName2Text, dualResult1Text, dualResult2Text; // Dual challenge texts
 
     // Private variables
     private List<GameObject> communityCards = new List<GameObject>();
     private List<GameObject> meeples = new List<GameObject>();
     private List<GameObject> activeMeeples = new List<GameObject>();
     private List<List<GameObject>> decks = new List<List<GameObject>>();
+    private List<Meeple> possibleOpponents = new List<Meeple>(); // For dual challenge
     private List<bool> groupChallengeResults = new List<bool>();
     private int currentRoll, currentEventMoveEffect, currentRulesPageNumber = 0;
     private int communityPageNumber = 0;
+    private int currentOpponentIndex = 0;
     private bool rolled, eventCardDrawn, eventAcknowledged, difficultySelected, revealed, groupRevealed, groupDone, challengeEvaluated, challengeCorrect = false;
+    private bool dualRevealed, dualDone, dualResult1, dualResult2 = false; // For dual challenge
     private string currentDifficulty, rollChoiceChosen, mentorToUse = "";
 
     // Meeples
@@ -61,9 +70,9 @@ public class Game : MonoBehaviour
     void Start()
     {
         // Deactivate stuff
-        decks = new List<List<GameObject>>{ challengeCardsEasy, challengeCardsMedium, challengeCardsHard, eventCardsEarly, eventCardsMid, eventCardsLate, mentorCards };
+        decks = new List<List<GameObject>>{ challengeCardsEasy, challengeCardsMedium, challengeCardsHard, eventCardsEarly, eventCardsMid, eventCardsLate, mentorCards, dualCardsEasy, dualCardsMedium, dualCardsHard };
         List<GameObject> buttons = new List<GameObject>{ rollButton.gameObject, revealButton.gameObject, groupRevealButton.gameObject, challengeCorrectButton.gameObject, challengeIncorrectButton.gameObject, groupDoneButton.gameObject, groupRevealButton.gameObject };
-        List<GameObject> panels = new List<GameObject>{ difficultySelectionPanel, challengePanel, eventPanel, earlyEventSelectionPanel, midEventSelectionPanel, lateEventSelectionPanel, communityPanel, groupChallengePanel };
+        List<GameObject> panels = new List<GameObject>{ difficultySelectionPanel, challengePanel, eventPanel, earlyEventSelectionPanel, midEventSelectionPanel, lateEventSelectionPanel, communityPanel, groupChallengePanel, dualChallengePanel };
         DeactivateAllLists(decks);
         DeactivateAllItems(buttons);
         DeactivateAllItems(panels);
@@ -75,6 +84,15 @@ public class Game : MonoBehaviour
         }
         groupEvalHint.gameObject.SetActive(false);
 
+        // Can dual even happen?
+        if (GlobalValues.numPlayers > 1) {
+            for (int i = 0; i < dualCardsEasy.Count; i++) {
+                challengeCardsEasy.Add(dualCardsEasy[i]);
+                challengeCardsMedium.Add(dualCardsMedium[i]);
+                challengeCardsHard.Add(dualCardsHard[i]);
+            }
+        }
+
         // Assign button listeners
         Button[] clickableButtons = { 
             rollButton, revealButton, acknowledgeEventButton, drawEarlyEventButton, drawMidEventButton, drawLateEventButton,
@@ -82,7 +100,9 @@ public class Game : MonoBehaviour
             checkMentorButton, mentorBackButton, useMentorButton, rollChoiceOneButton, rollChoiceTwoButton, checkCommunityButton,
             communityNextButton, communityPrevButton, communityBackButton, groupRevealButton, groupDoneButton,
             groupCorrectButtons[0], groupCorrectButtons[1], groupCorrectButtons[2], groupCorrectButtons[3],
-            groupIncorrectButtons[0], groupIncorrectButtons[1], groupIncorrectButtons[2], groupIncorrectButtons[3]
+            groupIncorrectButtons[0], groupIncorrectButtons[1], groupIncorrectButtons[2], groupIncorrectButtons[3],
+            obSetupButton, obHowToWinButton, obMentorButton, obRollButton, obEventButton, obChallengeButton, obCommunityButton, obFinishButton,
+            dualRevealButton, dualCorrect1Button, dualIncorrect1Button, dualCorrect2Button, dualIncorrect2Button, dualLeftButton, dualRightButton, dualDoneButton
         };
         UnityAction[] listeners = {
             RollOnClick, RevealOnClick, AcknowledgeEventOnClick, DrawEventCardOnClick, DrawEventCardOnClick, DrawEventCardOnClick,
@@ -90,9 +110,11 @@ public class Game : MonoBehaviour
             CheckMentorOnClick, MentorBackOnClick, UseMentorOnClick, RollChoiceOneOnClick, RollChoiceTwoOnClick, CommunityOnClick,
             CommunityNextOnClick, CommunityPrevOnClick, CommunityBackOnClick, GroupRevealOnClick, GroupDoneOnClick,
             GroupCorrectOnClick1, GroupCorrectOnClick2, GroupCorrectOnClick3, GroupCorrectOnClick4,
-            GroupIncorrectOnClick1, GroupIncorrectOnClick2, GroupIncorrectOnClick3, GroupIncorrectOnClick4
+            GroupIncorrectOnClick1, GroupIncorrectOnClick2, GroupIncorrectOnClick3, GroupIncorrectOnClick4,
+            ObSetupOnClick, ObHowToWinOnClick, ObMentorOnClick, ObRollOnClick, ObEventOnClick, ObChallengeOnClick, ObCommunityOnClick, ObFinishOnClick,
+            DualRevealOnClick, DualCorrect1OnClick, DualIncorrect1OnClick, DualCorrect2OnClick, DualIncorrect2OnClick, DualLeftOnClick, DualRightOnClick, DualDoneOnClick
         };
-        for(int i = 0; i < 32; i++) {
+        for(int i = 0; i < 48; i++) {
             clickableButtons[i].onClick.AddListener(listeners[i]);
         }
         StartCoroutine(StartGame());
@@ -129,8 +151,9 @@ public class Game : MonoBehaviour
     // Set up the game
     public void Setup()
     {
-        // Make the player read the rules
-        rulesPanel.gameObject.SetActive(true);
+        // Make the player onboard
+        onboardingPanel.gameObject.SetActive(true);
+        obSetup.gameObject.SetActive(true);
 
         // Shuffle the 3 types of challenge cards, 3 types of event cards, and mentor cards
         challengeCardsEasy = ShuffleList(challengeCardsEasy);
@@ -274,6 +297,7 @@ public class Game : MonoBehaviour
         deck.RemoveAt(0);
         deck.Add(currentCard);
 
+        // GROUP CHALLENGE!
         if (currentCard.GetComponent<ChallengeCard>().isGroupChallenge) {
             groupChallengePanel.gameObject.SetActive(true);
             currentCard.gameObject.SetActive(true);
@@ -309,7 +333,39 @@ public class Game : MonoBehaviour
             }
             displayText += " answered the Group Challenge correctly and gained " + points + " points!";
             RegisterEvent(displayText);
-        } else {
+        } 
+        
+        // DUAL CHALLENGE!
+        else if (currentCard.GetComponent<ChallengeCard>().isDualChallenge) {
+            dualChallengePanel.gameObject.SetActive(true);
+            currentCard.gameObject.SetActive(true);
+
+            // Who are the possible opponents they can dual against?
+            currentOpponentIndex = 0;
+            possibleOpponents = new List<Meeple>();
+            foreach (GameObject o in meeples) {
+                if (o.GetComponent<Meeple>().GetName() != GlobalValues.currentPlayer.GetName()) {
+                    possibleOpponents.Add(o.GetComponent<Meeple>());
+                }
+            }
+
+            // Wait for the dual to finish
+            yield return WaitForDualChallengeReveal();
+            yield return WaitForDualChallengeEval();
+
+            // Handle challenge result
+            GlobalValues.currentPlayer.IncrementChallengePoints(dualResult1? points: -1 * points);
+            Meeple opponent = possibleOpponents[currentOpponentIndex];
+            opponent.IncrementChallengePoints(dualResult2? points: -1 * points);
+
+            // Register the dual challenge event on the log
+            string displayText = GlobalValues.currentPlayer.GetName() + " challenged " + opponent.GetName() + " to a dual! ";
+            displayText += GlobalValues.currentPlayer.GetName() + (dualResult1? " gained ": " lost ") + points + " Challenge Points, and ";
+            displayText += opponent.GetName() + (dualResult2? " gained ": " lost ") + points + " Challenge Points.";
+            RegisterEvent(displayText); 
+        }
+        
+        else {
             challengePanel.gameObject.SetActive(true);
             currentCard.gameObject.SetActive(true);
 
@@ -331,6 +387,8 @@ public class Game : MonoBehaviour
         challengePointsText.SetText("Challenge Points: " + GlobalValues.currentPlayer.GetChallengePoints());
         currentCard.gameObject.SetActive(false);
         challengePanel.gameObject.SetActive(false);
+        dualChallengePanel.gameObject.SetActive(false);
+        groupChallengePanel.gameObject.SetActive(false);
     }
 
     // Waits for the player to click "OK" after reading an event
@@ -425,8 +483,47 @@ public class Game : MonoBehaviour
     {
         groupRevealed = false;
         groupRevealButton.gameObject.SetActive(true);
-        groupEvalHint.gameObject.SetActive(false);
         while(!groupRevealed) yield return null;
+    }
+
+    // Waits for the dual challenge reveal button to be clicked
+    public IEnumerator WaitForDualChallengeReveal()
+    {
+        // Hide irrelevant stuff on the dual challenge panel
+        List<GameObject> toHide = new List<GameObject>{ 
+            dualName1Text.gameObject, dualName2Text.gameObject, dualResult1Text.gameObject, dualResult2Text.gameObject,
+            dualCorrect1Button.gameObject, dualCorrect2Button.gameObject, dualIncorrect1Button.gameObject, dualIncorrect2Button.gameObject,
+            dualLeftButton.gameObject, dualRightButton.gameObject, dualDoneButton.gameObject
+        };
+        DeactivateAllItems(toHide);
+
+        // Wait
+        dualRevealed = false;
+        dualRevealButton.gameObject.SetActive(true);
+        while (!dualRevealed) yield return null;
+        dualRevealButton.gameObject.SetActive(false);
+    }
+
+    // Waits for the dual challenge to be evaluated
+    public IEnumerator WaitForDualChallengeEval() 
+    {
+        dualDone = false;
+
+        // Show the eval interface
+        List<GameObject> toShow = new List<GameObject>{ 
+            dualName1Text.gameObject, dualName2Text.gameObject, dualResult1Text.gameObject, dualResult2Text.gameObject,
+            dualCorrect1Button.gameObject, dualCorrect2Button.gameObject, dualIncorrect1Button.gameObject, dualIncorrect2Button.gameObject,
+            dualLeftButton.gameObject, dualRightButton.gameObject, dualDoneButton.gameObject
+        };
+        ActivateAllItems(toShow);
+        dualName1Text.text = GlobalValues.currentPlayer.GetName();
+        dualName2Text.text = possibleOpponents[currentOpponentIndex].GetName();
+        DualIncorrect1OnClick();
+        DualIncorrect2OnClick();
+        while (!dualDone) yield return null;
+
+        // Hide the eval interface
+        DeactivateAllItems(toShow);
     }
 
     // Waits for the Roll button to be clicked
@@ -522,7 +619,7 @@ public class Game : MonoBehaviour
         // If end on "finish" square, the meeple is done
         if (meeple.GetCurrentPathIndex() == 46) {
             int numDone = GlobalValues.numPlayers - activeMeeples.Count;
-            int rp = 6 - numDone;
+            int rp = 20 - numDone * 5;
             meeple.SetRankPoints(rp);
             RegisterEvent(meeple.GetName() + " reached the end of their scientific journey and gained " + rp + " Rank Points!");
         }
@@ -567,6 +664,7 @@ public class Game : MonoBehaviour
     void GroupRevealOnClick() {
         groupRevealed = true;
         communityPanel.gameObject.SetActive(true);
+        communityPageNumber = 0;
         for (int i = 0; i < 8; i++) {
             int index = communityPageNumber * 8 + i;
             if (index < communityCards.Count) {
@@ -638,9 +736,9 @@ public class Game : MonoBehaviour
     }
     void CommunityOnClick() {
         communityPanel.gameObject.SetActive(true);
+        communityPageNumber = 0;
         for (int i = 0; i < 8; i++) {
             int index = communityPageNumber * 8 + i;
-            communitySlots[i].GetComponent<RawImage>().texture = null;
             if (index < communityCards.Count) {
                 communitySlots[i].GetComponent<RawImage>().texture = communityCards[i].GetComponent<RawImage>().texture;
             }
@@ -664,6 +762,7 @@ public class Game : MonoBehaviour
             communityPageNumber -= 1;
             for (int i = 0; i < 8; i++) {
                 int index = communityPageNumber * 8 + i;
+                communitySlots[i].GetComponent<RawImage>().texture = null;
                 if (index < communityCards.Count) {
                     communitySlots[i].GetComponent<RawImage>().texture = communityCards[i].GetComponent<RawImage>().texture;
                 }
@@ -708,6 +807,74 @@ public class Game : MonoBehaviour
         groupChallengeResults[3] = false;
         groupResultTexts[3].GetComponent<TMP_Text>().text = "INCORRECT";
     }
+    void ObSetupOnClick() {
+        obSetup.gameObject.SetActive(false);
+        obHowToWin.gameObject.SetActive(true);
+    }
+    void ObHowToWinOnClick() {
+        obHowToWin.gameObject.SetActive(false);
+        obMentor.gameObject.SetActive(true);
+    }
+    void ObMentorOnClick() {
+        obMentor.gameObject.SetActive(false);
+        obRoll.gameObject.SetActive(true);
+    }
+    void ObRollOnClick() {
+        obRoll.gameObject.SetActive(false);
+        obEvent.gameObject.SetActive(true);
+    }
+    void ObEventOnClick() {
+        obEvent.gameObject.SetActive(false);
+        obChallenge.gameObject.SetActive(true);
+    }
+    void ObChallengeOnClick() {
+        obChallenge.gameObject.SetActive(false);
+        obCommunity.gameObject.SetActive(true);
+    }
+    void ObCommunityOnClick() {
+        obCommunity.gameObject.SetActive(false);
+        obFinish.gameObject.SetActive(true);
+    }
+    void ObFinishOnClick() {
+        obFinish.gameObject.SetActive(false);
+        onboardingPanel.gameObject.SetActive(false);
+    }
+    void DualRevealOnClick() {
+        dualRevealed = true;
+    }
+    void DualCorrect1OnClick() {
+        dualResult1 = true;
+        dualResult1Text.text = "CORRECT";
+    }
+    void DualCorrect2OnClick() {
+        dualResult2 = true;
+        dualResult2Text.text = "CORRECT";
+    }
+    void DualIncorrect1OnClick() {
+        dualResult1 = false;
+        dualResult1Text.text = "INCORRECT";
+    }
+    void DualIncorrect2OnClick() {
+        dualResult2 = false;
+        dualResult2Text.text = "INCORRECT";
+    }
+    void DualLeftOnClick() {
+        currentOpponentIndex += 1;
+        if (currentOpponentIndex >= possibleOpponents.Count) {
+            currentOpponentIndex = 0;
+        }
+        dualName2Text.text = possibleOpponents[currentOpponentIndex].GetName();
+    }
+    void DualRightOnClick() {
+        currentOpponentIndex -= 1;
+        if (currentOpponentIndex < 0) {
+            currentOpponentIndex = possibleOpponents.Count - 1;
+        }
+        dualName2Text.text = possibleOpponents[currentOpponentIndex].GetName();
+    }
+    void DualDoneOnClick() {
+        dualDone = true;
+    }
     
 
     // Shuffles a list of game objects
@@ -740,6 +907,13 @@ public class Game : MonoBehaviour
     public void DeactivateAllItems(List<GameObject> l) {
         for (int i = 0; i < l.Count; i++) {
             l[i].gameObject.SetActive(false);
+        }
+    }
+
+    // Activate all items in a list
+    public void ActivateAllItems(List<GameObject> l) {
+        for (int i = 0; i < l.Count; i++) {
+            l[i].gameObject.SetActive(true);
         }
     }
 

@@ -6,6 +6,7 @@ public class ChallengeCard : MonoBehaviour
 {
     public string difficulty;
     public bool isGroupChallenge = false;
+    public bool isDualChallenge = false;
 
     public int GetPoints() {
         if (difficulty == "easy") {
