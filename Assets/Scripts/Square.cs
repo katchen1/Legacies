@@ -10,13 +10,11 @@ public class Square : MonoBehaviour
     public bool isChallenge = false;
     public string stage = "early";
 
-    public float GetX()
-    {
+    public float GetX() {
         return gameObject.transform.position.x;
     }
 
-    public float GetZ()
-    {
+    public float GetZ() {
         return gameObject.transform.position.z;
     }
 }

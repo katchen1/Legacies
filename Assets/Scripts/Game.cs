@@ -425,6 +425,7 @@ public class Game : MonoBehaviour
     {
         groupRevealed = false;
         groupRevealButton.gameObject.SetActive(true);
+        groupEvalHint.gameObject.SetActive(false);
         while(!groupRevealed) yield return null;
     }
 
@@ -566,6 +567,12 @@ public class Game : MonoBehaviour
     void GroupRevealOnClick() {
         groupRevealed = true;
         communityPanel.gameObject.SetActive(true);
+        for (int i = 0; i < 8; i++) {
+            int index = communityPageNumber * 8 + i;
+            if (index < communityCards.Count) {
+                communitySlots[i].GetComponent<RawImage>().texture = communityCards[i].GetComponent<RawImage>().texture;
+            }
+        }
     }
     void ChallengeCorrectOnClick() {
         challengeCorrect = true;
@@ -582,7 +589,7 @@ public class Game : MonoBehaviour
         eventAcknowledged = true;
     }
     void NextPageOnClick() {
-        if (currentRulesPageNumber < 3) {
+        if (currentRulesPageNumber < 2) {
             DeactivateAllItems(rulesPages);
             currentRulesPageNumber += 1;
             rulesPages[currentRulesPageNumber].gameObject.SetActive(true);
@@ -633,6 +640,7 @@ public class Game : MonoBehaviour
         communityPanel.gameObject.SetActive(true);
         for (int i = 0; i < 8; i++) {
             int index = communityPageNumber * 8 + i;
+            communitySlots[i].GetComponent<RawImage>().texture = null;
             if (index < communityCards.Count) {
                 communitySlots[i].GetComponent<RawImage>().texture = communityCards[i].GetComponent<RawImage>().texture;
             }
