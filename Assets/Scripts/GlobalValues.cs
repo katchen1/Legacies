@@ -7,4 +7,6 @@ public class GlobalValues : MonoBehaviour
     public static int numPlayers = 1;
     public static Meeple currentPlayer;
     public static List<string> events = new List<string>();
+    public static bool sfx = true;
+    public static bool music = true;
 }

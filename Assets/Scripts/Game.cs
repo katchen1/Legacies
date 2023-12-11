@@ -10,6 +10,12 @@ public class Game : MonoBehaviour
     public GameObject[] meeplePrefabs;
     public GameObject[] squares;
 
+    public AudioSource splatAudioSource;
+    public AudioSource clickAudioSource;
+    public AudioSource musicAudioSource;
+    public Toggle musicToggle;
+    public Toggle sfxToggle;
+
     public List<GameObject> challengeCardsEasy, challengeCardsMedium, challengeCardsHard; // Challenge cards
     public List<GameObject> dualCardsEasy, dualCardsMedium, dualCardsHard; // Dual challenge cards
     public List<GameObject> eventCardsEarly, eventCardsMid, eventCardsLate; // Event cards
@@ -83,6 +89,13 @@ public class Game : MonoBehaviour
     // Start is called before the first frame update
     void Start()
     {
+        // Audio
+        clickAudioSource.volume = GlobalValues.sfx? 1f: 0f;
+        splatAudioSource.volume = GlobalValues.sfx? 0.2f: 0f;
+        musicAudioSource.volume = GlobalValues.music? 0.05f: 0f;
+        musicToggle.isOn = GlobalValues.music;
+        sfxToggle.isOn = GlobalValues.sfx;
+
         // Deactivate stuff
         decks = new List<List<GameObject>>{ challengeCardsEasy, challengeCardsMedium, challengeCardsHard, eventCardsEarly, eventCardsMid, eventCardsLate, mentorCards, dualCardsEasy, dualCardsMedium, dualCardsHard };
         List<GameObject> buttons = new List<GameObject>{ rollButton.gameObject, revealButton.gameObject, groupRevealButton.gameObject, challengeCorrectButton.gameObject, challengeIncorrectButton.gameObject, groupDoneButton.gameObject, groupRevealButton.gameObject, checkCommunityButton.gameObject };
@@ -687,6 +700,7 @@ public class Game : MonoBehaviour
             endPosition += meeple.GetPositionShift();
 
             // Move the meeple to the next square in one second
+            splatAudioSource.Play();
             float elapsedTime = 0f;
             float seconds = 0.2f;
             Vector3 startPosition = currentObject.transform.position;
@@ -724,6 +738,7 @@ public class Game : MonoBehaviour
     // What happens when the Roll button is clicked
     void RollOnClick()
     {
+        clickAudioSource.Play();
         int currentPathIndex = GlobalValues.currentPlayer.GetCurrentPathIndex();
         string stage = squares[currentPathIndex].GetComponent<Square>().stage;
         int minRoll = 0, maxRoll = 0;
@@ -743,21 +758,26 @@ public class Game : MonoBehaviour
 
     // Other button on click handlers
     void EasyOnClick() {
+        clickAudioSource.Play();
         currentDifficulty = "easy";
         difficultySelected = true;
     }
     void MediumOnClick() {
+        clickAudioSource.Play();
         currentDifficulty = "medium";
         difficultySelected = true;
     }
     void HardOnClick() {
+        clickAudioSource.Play();
         currentDifficulty = "hard";
         difficultySelected = true;
     }
     void RevealOnClick() {
+        clickAudioSource.Play();
         revealed = true;
     }
     void GroupRevealOnClick() {
+        clickAudioSource.Play();
         groupRevealed = true;
         communityPanel.gameObject.SetActive(true);
         communityPageNumber = 0;
@@ -769,20 +789,25 @@ public class Game : MonoBehaviour
         }
     }
     void ChallengeCorrectOnClick() {
+        clickAudioSource.Play();
         challengeCorrect = true;
         challengeEvaluated = true;
     }
     void ChallengeIncorrectOnClick() {
+        clickAudioSource.Play();
         challengeCorrect = false;
         challengeEvaluated = true;
     }
     void DrawEventCardOnClick() {
+        clickAudioSource.Play();
         eventCardDrawn = true;
     }
     void AcknowledgeEventOnClick() {
+        clickAudioSource.Play();
         eventAcknowledged = true;
     }
     void NextPageOnClick() {
+        clickAudioSource.Play();
         if (currentRulesPageNumber < 2) {
             DeactivateAllItems(rulesPages);
             currentRulesPageNumber += 1;
@@ -790,6 +815,7 @@ public class Game : MonoBehaviour
         }
     }
     void PreviousPageOnClick() {
+        clickAudioSource.Play();
         if (currentRulesPageNumber > 0) {
             DeactivateAllItems(rulesPages);
             currentRulesPageNumber -= 1;
@@ -797,14 +823,17 @@ public class Game : MonoBehaviour
         } 
     }
     void CheckMentorOnClick() {
+        clickAudioSource.Play();
         mentorPanel.gameObject.SetActive(true);
         GlobalValues.currentPlayer.GetMentorCard().gameObject.SetActive(true);
     }
     void MentorBackOnClick() {
+        clickAudioSource.Play();
         mentorPanel.gameObject.SetActive(false);
         GlobalValues.currentPlayer.GetMentorCard().gameObject.SetActive(false);
     }
     void UseMentorOnClick() {
+        clickAudioSource.Play();
         mentorToUse = GlobalValues.currentPlayer.GetMentorCard().GetComponent<MentorCard>().mentorName;
 
         // Register the event
@@ -825,12 +854,15 @@ public class Game : MonoBehaviour
         MentorBackOnClick();
     }
     void RollChoiceOneOnClick() {
+        clickAudioSource.Play();
         rollChoiceChosen = "one";
     }
     void RollChoiceTwoOnClick() {
+        clickAudioSource.Play();
         rollChoiceChosen = "two";
     }
     void CommunityOnClick() {
+        clickAudioSource.Play();
         communityPanel.gameObject.SetActive(true);
         communityPageNumber = 0;
         for (int i = 0; i < 8; i++) {
@@ -841,6 +873,7 @@ public class Game : MonoBehaviour
         }
     }
     void CommunityNextOnClick() {
+        clickAudioSource.Play();
         float numPages = communityCards.Count / 8f;
         if (communityPageNumber < numPages - 1) {
             communityPageNumber += 1;
@@ -854,6 +887,7 @@ public class Game : MonoBehaviour
         }
     }
     void CommunityPrevOnClick() {
+        clickAudioSource.Play();
         if (communityPageNumber > 0) {
             communityPageNumber -= 1;
             for (int i = 0; i < 8; i++) {
@@ -866,103 +900,127 @@ public class Game : MonoBehaviour
         }
     }
     void CommunityBackOnClick() {
+        clickAudioSource.Play();
         communityPanel.gameObject.SetActive(false);
     }
     void GroupDoneOnClick() {
+        clickAudioSource.Play();
         groupDone = true;
     }
     void GroupCorrectOnClick1() {
+        clickAudioSource.Play();
         groupChallengeResults[0] = true;
         groupResultTexts[0].GetComponent<TMP_Text>().text = "CORRECT";
     }
     void GroupCorrectOnClick2() {
+        clickAudioSource.Play();
         groupChallengeResults[1] = true;
         groupResultTexts[1].GetComponent<TMP_Text>().text = "CORRECT";
     }
     void GroupCorrectOnClick3() {
+        clickAudioSource.Play();
         groupChallengeResults[2] = true;
         groupResultTexts[2].GetComponent<TMP_Text>().text = "CORRECT";
     }
     void GroupCorrectOnClick4() {
+        clickAudioSource.Play();
         groupChallengeResults[3] = true;
         groupResultTexts[3].GetComponent<TMP_Text>().text = "CORRECT";
     }
     void GroupIncorrectOnClick1() {
+        clickAudioSource.Play();
         groupChallengeResults[0] = false;
         groupResultTexts[0].GetComponent<TMP_Text>().text = "INCORRECT";
     }
     void GroupIncorrectOnClick2() {
+        clickAudioSource.Play();
         groupChallengeResults[1] = false;
         groupResultTexts[1].GetComponent<TMP_Text>().text = "INCORRECT";
     }
     void GroupIncorrectOnClick3() {
+        clickAudioSource.Play();
         groupChallengeResults[2] = false;
         groupResultTexts[2].GetComponent<TMP_Text>().text = "INCORRECT";
     }
     void GroupIncorrectOnClick4() {
+        clickAudioSource.Play();
         groupChallengeResults[3] = false;
         groupResultTexts[3].GetComponent<TMP_Text>().text = "INCORRECT";
     }
     void ObSetupOnClick() {
+        clickAudioSource.Play();
         nextClicked = true;
         obSetup.gameObject.SetActive(false);
         obHowToWin.gameObject.SetActive(true);
     }
     void ObHowToWinOnClick() {
+        clickAudioSource.Play();
         nextClicked = true;
         obHowToWin.gameObject.SetActive(false);
         obMentor.gameObject.SetActive(true);
     }
     void ObMentorOnClick() {
+        clickAudioSource.Play();
         nextClicked = true;
         obMentor.gameObject.SetActive(false);
         obRoll.gameObject.SetActive(true);
     }
     void ObRollOnClick() {
+        clickAudioSource.Play();
         nextClicked = true;
         obRoll.gameObject.SetActive(false);
         onboardingPanel.gameObject.SetActive(false);
     }
     void ObEventOnClick() {
+        clickAudioSource.Play();
         nextClicked = true;
         obEvent.gameObject.SetActive(false);
         onboardingPanel.SetActive(false);
     }
     void ObChallengeOnClick() {
+        clickAudioSource.Play();
         nextClicked = true;
         obChallenge.gameObject.SetActive(false);
         onboardingPanel.SetActive(false);
     }
     void ObCommunityOnClick() {
+        clickAudioSource.Play();
         nextClicked = true;
         obCommunity.gameObject.SetActive(false);
         onboardingPanel.SetActive(false);
     }
     void ObFinishOnClick() {
+        clickAudioSource.Play();
         nextClicked = true;
         obFinish.gameObject.SetActive(false);
         onboardingPanel.gameObject.SetActive(false);
     }
     void DualRevealOnClick() {
+        clickAudioSource.Play();
         dualRevealed = true;
     }
     void DualCorrect1OnClick() {
+        clickAudioSource.Play();
         dualResult1 = true;
         dualResult1Text.text = "CORRECT";
     }
     void DualCorrect2OnClick() {
+        clickAudioSource.Play();
         dualResult2 = true;
         dualResult2Text.text = "CORRECT";
     }
     void DualIncorrect1OnClick() {
+        clickAudioSource.Play();
         dualResult1 = false;
         dualResult1Text.text = "INCORRECT";
     }
     void DualIncorrect2OnClick() {
+        clickAudioSource.Play();
         dualResult2 = false;
         dualResult2Text.text = "INCORRECT";
     }
     void DualLeftOnClick() {
+        clickAudioSource.Play();
         currentOpponentIndex += 1;
         if (currentOpponentIndex >= possibleOpponents.Count) {
             currentOpponentIndex = 0;
@@ -970,6 +1028,7 @@ public class Game : MonoBehaviour
         dualName2Text.text = possibleOpponents[currentOpponentIndex].GetName();
     }
     void DualRightOnClick() {
+        clickAudioSource.Play();
         currentOpponentIndex -= 1;
         if (currentOpponentIndex < 0) {
             currentOpponentIndex = possibleOpponents.Count - 1;
@@ -977,12 +1036,15 @@ public class Game : MonoBehaviour
         dualName2Text.text = possibleOpponents[currentOpponentIndex].GetName();
     }
     void DualDoneOnClick() {
+        clickAudioSource.Play();
         dualDone = true;
     }
     void PauseOnClick() {
+        clickAudioSource.Play();
         menuPanel.gameObject.SetActive(true);
     }
     void HideLogOnClick() {
+        clickAudioSource.Play();
         logShown = !logShown;
         hideLogText.text = logShown? "HIDE LOG": "SHOW LOG";
         logPanel.gameObject.SetActive(logShown);
