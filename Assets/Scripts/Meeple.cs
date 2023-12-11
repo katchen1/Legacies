@@ -112,8 +112,6 @@ public class Meeple : MonoBehaviour
 
     public void SetColor(Color c) {
         color = c;
-        var capsule = gameObject.GetComponent<Renderer>();
-        capsule.material.SetColor("_Color", c);
     }
 
     public Color GetColor()  {

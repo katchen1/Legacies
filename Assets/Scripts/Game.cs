@@ -7,7 +7,7 @@ using UnityEngine.Events;
 
 public class Game : MonoBehaviour
 {
-    public GameObject meeplePrefab;
+    public GameObject[] meeplePrefabs;
     public GameObject[] squares;
 
     public List<GameObject> challengeCardsEasy, challengeCardsMedium, challengeCardsHard; // Challenge cards
@@ -22,9 +22,11 @@ public class Game : MonoBehaviour
 
     public GameObject difficultySelectionPanel, challengePanel, groupChallengePanel; // Challenge handling
     public GameObject earlyEventSelectionPanel, midEventSelectionPanel, lateEventSelectionPanel, eventPanel; // Event handling
-    public GameObject communityPanel, menuPanel, rulesPanel, endingPanel, mentorPanel, mentorIcon, groupEvalHint; // Other UI objects
+    public GameObject communityPanel, menuPanel, rulesPanel, endingPanel, mentorPanel, mentorIcon, groupEvalHint, logPanel; // Other UI objects
     public GameObject onboardingPanel, obSetup, obHowToWin, obMentor, obRoll, obEvent, obChallenge, obCommunity, obFinish; // Onboarding
     public GameObject dualChallengePanel; // Dual challenge
+    public GameObject generalPanel, endingBackground, confettiParticleSystem, lighting; // Endgame
+    public GameObject challengeEasyCard, challengeMediumCard, challengeHardCard, eventLateCard, eventMidCard, eventEarlyCard; // Visible decks
 
 
     public Button easyButton, mediumButton, hardButton, revealButton, challengeCorrectButton, challengeIncorrectButton; // Challenge buttons
@@ -34,16 +36,23 @@ public class Game : MonoBehaviour
     public Button checkCommunityButton, communityNextButton, communityPrevButton, communityBackButton; // Community area buttons
     public Button rollButton, rollChoiceOneButton, rollChoiceTwoButton; // Roll buttons
     public Button groupRevealButton, groupDoneButton; // Group challenges
+    public Button pauseButton, hideLogButton; // Other UI buttons
     public Button obSetupButton, obHowToWinButton, obMentorButton, obRollButton, obEventButton, obChallengeButton, obCommunityButton, obFinishButton; // Onboarding buttons
     public Button dualRevealButton, dualIncorrect1Button, dualCorrect1Button, dualIncorrect2Button, dualCorrect2Button, dualLeftButton, dualRightButton, dualDoneButton; // Dual challenge
     public TMP_Text rollChoiceOneButtonText, rollChoiceTwoButtonText, rollChoiceHintText; // Roll texts
-    public TMP_Text turnText, challengePointsText, statsText; // Other UI texts
+    public TMP_Text turnText, challengePointsText, statsText, hideLogText, winnerText; // Other UI texts
     public TMP_Text dualName1Text, dualName2Text, dualResult1Text, dualResult2Text; // Dual challenge texts
 
     // Private variables
     private List<GameObject> communityCards = new List<GameObject>();
     private List<GameObject> meeples = new List<GameObject>();
     private List<GameObject> activeMeeples = new List<GameObject>();
+    private List<GameObject> challengeEasyVisibleDeck = new List<GameObject>();
+    private List<GameObject> challengeMediumVisibleDeck = new List<GameObject>();
+    private List<GameObject> challengeHardVisibleDeck = new List<GameObject>();
+    private List<GameObject> eventLateVisibleDeck = new List<GameObject>();
+    private List<GameObject> eventMidVisibleDeck = new List<GameObject>();
+    private List<GameObject> eventEarlyVisibleDeck = new List<GameObject>();
     private List<List<GameObject>> decks = new List<List<GameObject>>();
     private List<Meeple> possibleOpponents = new List<Meeple>(); // For dual challenge
     private List<bool> groupChallengeResults = new List<bool>();
@@ -52,18 +61,23 @@ public class Game : MonoBehaviour
     private int currentOpponentIndex = 0;
     private bool rolled, eventCardDrawn, eventAcknowledged, difficultySelected, revealed, groupRevealed, groupDone, challengeEvaluated, challengeCorrect = false;
     private bool dualRevealed, dualDone, dualResult1, dualResult2 = false; // For dual challenge
+    private bool logShown = true;
+    private bool eventTriggered = false;
+    private bool challengeTriggered = false;
+    private bool exactFinishTriggered = false;
+    private bool exactFinishShown = false;
+    private bool nextClicked = false;
     private string currentDifficulty, rollChoiceChosen, mentorToUse = "";
 
     // Meeples
     private GameObject currentMeeple;
-    private Color[] meepleColors = { Color.red, Color.black, Color.yellow, Color.green, Color.blue };
-    private string[] meepleColorStrings = { "Red", "Black",  "Yellow",  "Green",  "Blue" };
+    private Color[] meepleColors = { Color.red, Color.yellow, Color.green, Color.black };
+    private string[] meepleColorStrings = { "Pink", "Orange",  "Green",  "Black" };
     private Vector3[] positionShifts = {
-        new Vector3(0f, 0f, 0f),
-        new Vector3(0.2f, 0f, 0.2f),
-        new Vector3(0.2f, 0f, 0.4f),
-        new Vector3(-0.2f, 0f, 0.2f),
-        new Vector3(-0.2f, 0f, 0.4f)
+        new Vector3(0f, 0f, -0.3f),
+        new Vector3(0.3f, 0f, 0f),
+        new Vector3(0f, 0f, 0.3f),
+        new Vector3(-0.3f, 0f, 0f)
     };
 
     // Start is called before the first frame update
@@ -71,7 +85,7 @@ public class Game : MonoBehaviour
     {
         // Deactivate stuff
         decks = new List<List<GameObject>>{ challengeCardsEasy, challengeCardsMedium, challengeCardsHard, eventCardsEarly, eventCardsMid, eventCardsLate, mentorCards, dualCardsEasy, dualCardsMedium, dualCardsHard };
-        List<GameObject> buttons = new List<GameObject>{ rollButton.gameObject, revealButton.gameObject, groupRevealButton.gameObject, challengeCorrectButton.gameObject, challengeIncorrectButton.gameObject, groupDoneButton.gameObject, groupRevealButton.gameObject };
+        List<GameObject> buttons = new List<GameObject>{ rollButton.gameObject, revealButton.gameObject, groupRevealButton.gameObject, challengeCorrectButton.gameObject, challengeIncorrectButton.gameObject, groupDoneButton.gameObject, groupRevealButton.gameObject, checkCommunityButton.gameObject };
         List<GameObject> panels = new List<GameObject>{ difficultySelectionPanel, challengePanel, eventPanel, earlyEventSelectionPanel, midEventSelectionPanel, lateEventSelectionPanel, communityPanel, groupChallengePanel, dualChallengePanel };
         DeactivateAllLists(decks);
         DeactivateAllItems(buttons);
@@ -94,7 +108,7 @@ public class Game : MonoBehaviour
         }
 
         // Assign button listeners
-        Button[] clickableButtons = { 
+        Button[] clickableButtons = {
             rollButton, revealButton, acknowledgeEventButton, drawEarlyEventButton, drawMidEventButton, drawLateEventButton,
             challengeCorrectButton, challengeIncorrectButton, easyButton, mediumButton, hardButton, nextPageButton, previousPageButton,
             checkMentorButton, mentorBackButton, useMentorButton, rollChoiceOneButton, rollChoiceTwoButton, checkCommunityButton,
@@ -102,7 +116,8 @@ public class Game : MonoBehaviour
             groupCorrectButtons[0], groupCorrectButtons[1], groupCorrectButtons[2], groupCorrectButtons[3],
             groupIncorrectButtons[0], groupIncorrectButtons[1], groupIncorrectButtons[2], groupIncorrectButtons[3],
             obSetupButton, obHowToWinButton, obMentorButton, obRollButton, obEventButton, obChallengeButton, obCommunityButton, obFinishButton,
-            dualRevealButton, dualCorrect1Button, dualIncorrect1Button, dualCorrect2Button, dualIncorrect2Button, dualLeftButton, dualRightButton, dualDoneButton
+            dualRevealButton, dualCorrect1Button, dualIncorrect1Button, dualCorrect2Button, dualIncorrect2Button, dualLeftButton, dualRightButton, dualDoneButton,
+            pauseButton, hideLogButton
         };
         UnityAction[] listeners = {
             RollOnClick, RevealOnClick, AcknowledgeEventOnClick, DrawEventCardOnClick, DrawEventCardOnClick, DrawEventCardOnClick,
@@ -112,9 +127,10 @@ public class Game : MonoBehaviour
             GroupCorrectOnClick1, GroupCorrectOnClick2, GroupCorrectOnClick3, GroupCorrectOnClick4,
             GroupIncorrectOnClick1, GroupIncorrectOnClick2, GroupIncorrectOnClick3, GroupIncorrectOnClick4,
             ObSetupOnClick, ObHowToWinOnClick, ObMentorOnClick, ObRollOnClick, ObEventOnClick, ObChallengeOnClick, ObCommunityOnClick, ObFinishOnClick,
-            DualRevealOnClick, DualCorrect1OnClick, DualIncorrect1OnClick, DualCorrect2OnClick, DualIncorrect2OnClick, DualLeftOnClick, DualRightOnClick, DualDoneOnClick
+            DualRevealOnClick, DualCorrect1OnClick, DualIncorrect1OnClick, DualCorrect2OnClick, DualIncorrect2OnClick, DualLeftOnClick, DualRightOnClick, DualDoneOnClick,
+            PauseOnClick, HideLogOnClick
         };
-        for(int i = 0; i < 48; i++) {
+        for(int i = 0; i < 50; i++) {
             clickableButtons[i].onClick.AddListener(listeners[i]);
         }
         StartCoroutine(StartGame());
@@ -137,14 +153,33 @@ public class Game : MonoBehaviour
 
         // End game
         string stats = "RP = Rank Points\nCP = Challenge Points\n\n";
+        List<Meeple> winners = new List<Meeple>();
+        int winningScore = 0;
         for (int i = 0; i < meeples.Count; i++) {
             Meeple meeple = meeples[i].GetComponent<Meeple>();
             int cp = meeple.GetChallengePoints();
             int rp = meeple.GetRankPoints();
             int tp = cp + rp;
             stats += meeple.GetName() + "\t\t" + rp + " RP + " + cp + " CP = " + tp + "\n";
+            if (tp > winningScore) {
+                winningScore = tp;
+                winners = new List<Meeple>();
+                winners.Add(meeple);
+            } else if (tp == winningScore) {
+                winners.Add(meeple);
+            }
         }
+        string winnersText = winners[0].GetName();
+        for (int i = 1; i < winners.Count; i++) {
+            winnersText += " & " + winners[i].GetName();
+        }
+        winnersText += " Won!";
         endingPanel.gameObject.SetActive(true);
+        lighting.gameObject.SetActive(false);
+        endingBackground.gameObject.SetActive(true);
+        confettiParticleSystem.gameObject.SetActive(true);
+        generalPanel.gameObject.SetActive(false);
+        winnerText.SetText(winnersText);
         statsText.SetText(stats);
     }
 
@@ -164,10 +199,18 @@ public class Game : MonoBehaviour
         eventCardsLate = ShuffleList(eventCardsLate);
         mentorCards = ShuffleList(mentorCards);
 
+        // Create the visible decks
+        CreateVisibleDeck(challengeEasyCard, challengeEasyVisibleDeck, challengeCardsEasy);
+        CreateVisibleDeck(challengeMediumCard, challengeMediumVisibleDeck, challengeCardsMedium);
+        CreateVisibleDeck(challengeHardCard, challengeHardVisibleDeck, challengeCardsHard);
+        CreateVisibleDeck(eventLateCard, eventLateVisibleDeck, eventCardsLate);
+        CreateVisibleDeck(eventMidCard, eventMidVisibleDeck, eventCardsMid);
+        CreateVisibleDeck(eventEarlyCard, eventEarlyVisibleDeck, eventCardsEarly);
+
         // Each player chooses a meeple and place it at the path's start
         Square startSquare = squares[0].GetComponent<Square>();
         for (int i = 0; i < GlobalValues.numPlayers; i++) {
-            GameObject meeple = Instantiate(meeplePrefab, new Vector3(startSquare.GetX(), 0, startSquare.GetZ()), Quaternion.identity);
+            GameObject meeple = Instantiate(meeplePrefabs[i], new Vector3(startSquare.GetX(), 0, startSquare.GetZ()), Quaternion.Euler(0, 90, 40));
             meeple.GetComponent<Meeple>().SetColor(meepleColors[i]);
             meeple.GetComponent<Meeple>().SetColorString(meepleColorStrings[i]);
             meeple.GetComponent<Meeple>().SetIsPlayer(i == 0);
@@ -238,25 +281,47 @@ public class Game : MonoBehaviour
     // Handles when a player lands on an event square
     public IEnumerator HandleEvent(string stage)
     {
+        // Onboarding - events
+        if (!eventTriggered) {
+            onboardingPanel.gameObject.SetActive(true);
+            obEvent.SetActive(true);
+            yield return WaitForNextClick();
+        }
+
         // Determine the deck based on the stage
         List<GameObject> deck;
+        List<GameObject> visibleDeck;
         GameObject panel;
         if (stage == "early") {
             deck = eventCardsEarly;
+            visibleDeck = eventEarlyVisibleDeck;
             panel = earlyEventSelectionPanel;
         } else if (stage == "mid") {
             deck = eventCardsMid;
+            visibleDeck = eventMidVisibleDeck;
             panel = midEventSelectionPanel;
         } else {
             deck = eventCardsLate;
+            visibleDeck = eventLateVisibleDeck;
             panel = lateEventSelectionPanel;
         }
 
         // Check if there are cards left in the deck
         if (deck.Count > 0) {
             yield return WaitForDrawEvent(panel);
-            yield return WaitForAcknowledgeEvent(deck);
+            yield return WaitForAcknowledgeEvent(deck, visibleDeck);
+            if (!eventTriggered) {
+                checkCommunityButton.gameObject.SetActive(true);
+            }
             yield return Move(currentMeeple, currentEventMoveEffect);
+
+            // Onboarding - community
+            if (!eventTriggered) {
+                onboardingPanel.gameObject.SetActive(true);
+                obCommunity.gameObject.SetActive(true);
+                eventTriggered = true;
+                yield return WaitForNextClick();
+            }
 
             // Register the move event
             string playerName = currentMeeple.GetComponent<Meeple>().GetName();
@@ -271,6 +336,13 @@ public class Game : MonoBehaviour
     // Handles when a player lands on a challenge square
     public IEnumerator HandleChallenge()
     {
+        // Onboarding - challenge
+        if (!challengeTriggered) {
+            onboardingPanel.gameObject.SetActive(true);
+            obChallenge.gameObject.SetActive(true);
+            challengeTriggered = true;
+            yield return WaitForNextClick();
+        }
         yield return WaitForDifficultySelection();
         yield return DoChallenge(currentDifficulty);
     }
@@ -392,7 +464,7 @@ public class Game : MonoBehaviour
     }
 
     // Waits for the player to click "OK" after reading an event
-    public IEnumerator WaitForAcknowledgeEvent(List<GameObject> deck)
+    public IEnumerator WaitForAcknowledgeEvent(List<GameObject> deck, List<GameObject> visibleDeck)
     {
         // Draw the card and show it
         GameObject currentCard = deck[0];
@@ -401,6 +473,13 @@ public class Game : MonoBehaviour
         currentCard.gameObject.SetActive(true);
         currentEventMoveEffect = currentCard.GetComponent<EventCard>().moveEffect;
         communityCards.Add(currentCard);
+
+        // Diminish the visible deck
+        if (visibleDeck.Count > 0) {
+            GameObject toDestroy = visibleDeck[visibleDeck.Count - 1];
+            visibleDeck.RemoveAt(visibleDeck.Count - 1);
+            Destroy(toDestroy);
+        }
 
         // Let the player acknowledge
         eventAcknowledged = false;
@@ -526,6 +605,12 @@ public class Game : MonoBehaviour
         DeactivateAllItems(toShow);
     }
 
+    // Waits for the next button to be clicked
+    public IEnumerator WaitForNextClick() {
+        nextClicked = false;
+        while (!nextClicked) yield return null;
+    }
+
     // Waits for the Roll button to be clicked
     public IEnumerator WaitForRoll()
     {
@@ -589,7 +674,10 @@ public class Game : MonoBehaviour
         Meeple meeple = currentObject.GetComponent<Meeple>();
         for (int i = 0; i < spaces; i++) {
             // If hit "finish" square while moving, go backwards
-            if (meeple.GetCurrentPathIndex() == 46) direction = -1;
+            if (meeple.GetCurrentPathIndex() == 46) {
+                exactFinishTriggered = true;
+                direction = -1;
+            }
 
             // Get target position
             int currentPathIndex = meeple.GetCurrentPathIndex() + direction;
@@ -622,6 +710,14 @@ public class Game : MonoBehaviour
             int rp = 20 - numDone * 5;
             meeple.SetRankPoints(rp);
             RegisterEvent(meeple.GetName() + " reached the end of their scientific journey and gained " + rp + " Rank Points!");
+        }
+
+        // Onboarding - exact finish
+        if (exactFinishTriggered && !exactFinishShown) {
+            onboardingPanel.gameObject.SetActive(true);
+            obFinish.gameObject.SetActive(true);
+            exactFinishShown = true;
+            exactFinishTriggered = false;
         }
     }
 
@@ -808,34 +904,42 @@ public class Game : MonoBehaviour
         groupResultTexts[3].GetComponent<TMP_Text>().text = "INCORRECT";
     }
     void ObSetupOnClick() {
+        nextClicked = true;
         obSetup.gameObject.SetActive(false);
         obHowToWin.gameObject.SetActive(true);
     }
     void ObHowToWinOnClick() {
+        nextClicked = true;
         obHowToWin.gameObject.SetActive(false);
         obMentor.gameObject.SetActive(true);
     }
     void ObMentorOnClick() {
+        nextClicked = true;
         obMentor.gameObject.SetActive(false);
         obRoll.gameObject.SetActive(true);
     }
     void ObRollOnClick() {
+        nextClicked = true;
         obRoll.gameObject.SetActive(false);
-        obEvent.gameObject.SetActive(true);
+        onboardingPanel.gameObject.SetActive(false);
     }
     void ObEventOnClick() {
+        nextClicked = true;
         obEvent.gameObject.SetActive(false);
-        obChallenge.gameObject.SetActive(true);
+        onboardingPanel.SetActive(false);
     }
     void ObChallengeOnClick() {
+        nextClicked = true;
         obChallenge.gameObject.SetActive(false);
-        obCommunity.gameObject.SetActive(true);
+        onboardingPanel.SetActive(false);
     }
     void ObCommunityOnClick() {
+        nextClicked = true;
         obCommunity.gameObject.SetActive(false);
-        obFinish.gameObject.SetActive(true);
+        onboardingPanel.SetActive(false);
     }
     void ObFinishOnClick() {
+        nextClicked = true;
         obFinish.gameObject.SetActive(false);
         onboardingPanel.gameObject.SetActive(false);
     }
@@ -874,6 +978,14 @@ public class Game : MonoBehaviour
     }
     void DualDoneOnClick() {
         dualDone = true;
+    }
+    void PauseOnClick() {
+        menuPanel.gameObject.SetActive(true);
+    }
+    void HideLogOnClick() {
+        logShown = !logShown;
+        hideLogText.text = logShown? "HIDE LOG": "SHOW LOG";
+        logPanel.gameObject.SetActive(logShown);
     }
     
 
@@ -914,6 +1026,18 @@ public class Game : MonoBehaviour
     public void ActivateAllItems(List<GameObject> l) {
         for (int i = 0; i < l.Count; i++) {
             l[i].gameObject.SetActive(true);
+        }
+    }
+
+    // Creating a visible deck
+    public void CreateVisibleDeck(GameObject baseCard, List<GameObject> visibleDeck, List<GameObject> deck) {
+        visibleDeck.Add(baseCard);
+        float x = baseCard.transform.position.x;
+        float y = baseCard.transform.position.y;
+        float z = baseCard.transform.position.z;
+        for (int i = 1; i < deck.Count; i++) {
+            GameObject card = Instantiate(baseCard, new Vector3(x, y + 0.03f * i, z), Quaternion.Euler(0, 180, 0));
+            visibleDeck.Add(card);
         }
     }
 
